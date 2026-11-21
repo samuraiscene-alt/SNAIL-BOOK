@@ -63,3 +63,9 @@
   align-content:stretch;
 }
 .calendar-root .month-grid .month-cell{min-height:0}
+
+/* v0.2.3: keep month view's 40px menu/search controls clear of the iPhone status bar.
+   The existing fixed viewport height distributes the remaining room across week rows. */
+.calendar-root .wrap:has(> .month-grid){
+  padding-top:max(64px, calc(env(safe-area-inset-top) + 8px));
+}
