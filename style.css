@@ -280,3 +280,10 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .calendar-popup #searchResults .detail-row{min-width:0}
 .calendar-popup #searchResults .detail-row>span{min-width:0;overflow-wrap:anywhere}
 .calendar-menu-option{width:100%;border:0;border-radius:12px;background:#2a2c35;color:#fff;font-size:16px;font-weight:650;text-align:left;padding:15px;margin:4px 0}
+
+/* v0.3.9: non-overlapping closed-day choices on narrow iPhone screens */
+.closed-days-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px;width:100%}
+.closed-day-choice{box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:44px;margin:0;padding:8px 4px;border:1px solid #cbd8ed;border-radius:12px;background:#fff;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer}
+.closed-day-choice input{width:17px;height:17px;min-width:17px;margin:0;accent-color:#347dff}
+.closed-day-choice span{flex:none}
+@media(max-width:350px){.closed-days-grid{gap:6px}.closed-day-choice{font-size:13px;padding:7px 2px}}
