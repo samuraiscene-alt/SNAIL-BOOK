@@ -49,6 +49,18 @@ function openServiceWheel(id,kind){
   <div class="wheel-actions"><button type="button" class="wheel-cancel">재설정</button><button type="button" class="wheel-done" aria-label="선택 완료">✓</button></div>
   </section>`;
   document.body.appendChild(back);
+  // iOS Safari: freeze the page beneath the picker, while keeping wheel columns scrollable.
+  const savedScroll=window.scrollY;
+  const original={position:document.body.style.position,top:document.body.style.top,left:document.body.style.left,right:document.body.style.right,width:document.body.style.width};
+  Object.assign(document.body.style,{position:'fixed',top:`-${savedScroll}px`,left:'0',right:'0',width:'100%'});
+  const closeWheel=()=>{
+    back.remove();
+    Object.assign(document.body.style,original);
+    window.scrollTo(0,savedScroll);
+  };
+  back.addEventListener('touchmove',e=>{
+    if(!e.target.closest('.wheel-col'))e.preventDefault();
+  },{passive:false});
   const columns=[...back.querySelectorAll('.wheel-col')];
   function currentValue(){return price?vals.a*10000+vals.b*1000:vals.a*60+vals.b}
   function updateResult(){}
@@ -72,13 +84,13 @@ function openServiceWheel(id,kind){
   });
   requestAnimationFrame(()=>{columns[0].scrollTop=initialA*rowHeight;columns[1].scrollTop=secondOptions.indexOf(initialB)*rowHeight;updateResult()});
   back.querySelector('.wheel-cancel').onclick=()=>{columns.forEach((col,i)=>col.scrollTo({top:0,behavior:'smooth'}))};
-  back.addEventListener('click',ev=>{if(ev.target===back)back.remove()});
+  back.addEventListener('click',ev=>{if(ev.target===back)closeWheel()});
   back.querySelector('.wheel-done').onclick=()=>{
     columns.forEach((col,i)=>{const options=i?secondOptions:firstOptions;vals[i?'b':'a']=options[Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/rowHeight)))]});
     const n=currentValue();
     if(!price&&n<10){alert('시술 시간은 최소 10분으로 선택해 주세요.');return}
     if(price)s.price=n;else s.minutes=n;
-    back.remove();render();
+    closeWheel();render();
   };
 }
 function hoursPage(){return `<div class="wrap">${panelHead('예약 시간 설정')}<div class="card"><div class="field"><label>영업 시작</label><input type="time" id="open" value="${store.settings.open}"></div><div class="field"><label>영업 종료</label><input type="time" id="close" value="${store.settings.close}"></div><div class="field"><label>예약 간격</label><select id="interval">${[15,30,60].map(n=>`<option ${store.settings.interval===n?'selected':''} value="${n}">${n}분</option>`).join('')}</select></div><div style="margin-top:20px"><b>정기 휴무 요일</b><div style="margin-top:12px">${['일','월','화','수','목','금','토'].map((v,i)=>`<label class="chip"><input type="checkbox" data-closed-day="${i}" ${store.settings.closedDays.includes(i)?'checked':''}> ${v}</label>`).join('')}</div></div></div><button class="primary" data-save-hours="1">예약 시간 저장</button></div>`}
