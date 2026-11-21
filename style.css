@@ -200,3 +200,18 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .calendar-root .week-columns.single-day{grid-template-columns:minmax(0,1fr)}
 .calendar-root .week-columns.single-day .week-column{border-right:0}
 .calendar-root .week-columns.single-day .day-event{left:8px;right:8px;min-width:0;overflow:hidden;overflow-wrap:anywhere}
+
+/* v0.3.5: week date labels exactly align with schedule columns after hour gutter */
+.calendar-root .week-days{
+ box-sizing:border-box;
+ width:100%;
+ padding-left:60px;
+ grid-template-columns:repeat(7,minmax(0,1fr));
+}
+.calendar-root .week-columns{grid-template-columns:repeat(7,minmax(0,1fr))}
+.calendar-root .calendar-grid-wrap{width:100%;min-width:0}
+.calendar-root .hour-labels{width:60px;flex:0 0 60px}
+.calendar-root .schedule-area{min-width:0;flex:1 1 0}
+.calendar-root .week-columns.single-day{grid-template-columns:minmax(0,1fr)}
+/* All 24 hours exist in day view; its grid scrolls inside the available height. */
+.calendar-root .calendar-grid-wrap{overscroll-behavior:contain}
