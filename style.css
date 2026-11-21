@@ -74,3 +74,29 @@
 .calendar-root .wrap:not(:has(> .month-grid)){
   padding-top:max(64px, calc(env(safe-area-inset-top) + 8px));
 }
+
+/* v0.2.5: two-column tactile spinning wheel for service price and duration */
+.service-table .service-head,.service-table .service-field{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 38px;
+ column-gap:8px;align-items:center;
+}
+.service-table .service-head{font-size:12px;font-weight:700;color:#81838e;text-align:center;padding:2px 0 12px}
+.service-table .service-field{padding:11px 0;border-bottom:1px solid #e1e1e8}
+.service-table .service-field input,.service-table .service-picker{
+ width:100%;min-width:0;border:0;border-radius:9px;background:#f3f3f8;
+ font-size:14px;font-weight:600;text-align:center;height:43px;padding:6px 2px;color:#18181e;
+}
+.service-table .service-picker{color:#087aff;cursor:pointer}
+.service-table .service-field .danger{height:43px;padding:0;font-size:22px}
+.service-table .secondary{margin-top:12px}
+.wheel-backdrop{position:fixed;inset:0;z-index:120;background:#0007;display:flex;align-items:flex-end;justify-content:center}
+.wheel-sheet{width:100%;max-width:560px;border-radius:20px 20px 0 0;background:#f8f8fb;padding:0 14px calc(16px + env(safe-area-inset-bottom));color:#202126;box-shadow:0 -10px 30px #0003}
+.wheel-toolbar{display:flex;justify-content:space-between;align-items:center;padding:16px 2px 12px;font-size:16px}
+.wheel-toolbar button{border:0;background:transparent;color:#087aff;font-size:16px;padding:6px 8px;font-weight:650}
+.wheel-frame{position:relative;display:flex;justify-content:center;gap:12px;height:220px;overflow:hidden}
+.wheel-highlight{position:absolute;top:88px;left:0;right:0;height:44px;border-radius:10px;background:#e7e7ed;pointer-events:none}
+.wheel-col{position:relative;z-index:1;flex:1;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;text-align:center}
+.wheel-col::-webkit-scrollbar{display:none}
+.wheel-option,.wheel-pad{height:44px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;font-size:21px;font-weight:550}
+.wheel-pad{height:88px;scroll-snap-align:none}
+.wheel-result{text-align:center;font-size:17px;font-weight:700;color:#087aff;padding:12px 0}
