@@ -37,23 +37,21 @@ function openServiceWheel(id,kind){
   const s=store.services.find(v=>v.id===id);if(!s)return;
   document.querySelector('.wheel-backdrop')?.remove();
   const price=kind==='price',current=price?Math.max(0,Number(s.price)||0):Math.max(0,Number(s.minutes)||0);
-  const firstOptions=Array.from({length:price?201:13},(_,i)=>i);
+  const firstOptions=Array.from({length:price?51:13},(_,i)=>i);
   const secondOptions=Array.from({length:price?10:6},(_,i)=>price?i:i*10);
-  const initialA=price?Math.min(200,Math.floor(current/10000)):Math.min(12,Math.floor(current/60));
+  const initialA=price?Math.min(50,Math.floor(current/10000)):Math.min(12,Math.floor(current/60));
   const initialB=price?Math.min(9,Math.floor((current%10000)/1000)):Math.min(50,Math.round((current%60)/10)*10);
   const vals={a:initialA,b:initialB};
-  const makeColumn=(name,arr,suffix)=>`<div class="wheel-col" data-wheel-col="${name}" aria-label="${suffix} 선택"><div class="wheel-pad"></div>${arr.map(v=>`<div class="wheel-option" data-wheel-value="${v}">${v}${suffix}</div>`).join('')}<div class="wheel-pad"></div></div>`;
+  const makeColumn=(name,arr,label)=>`<div class="wheel-col" data-wheel-col="${name}" aria-label="${label} 선택"><div class="wheel-pad"></div>${arr.map(v=>`<div class="wheel-option" data-wheel-value="${v}">${String(v).padStart(2,'0')}</div>`).join('')}<div class="wheel-pad"></div></div>`;
   const back=document.createElement('div');back.className='wheel-backdrop';
   back.innerHTML=`<section class="wheel-sheet" role="dialog" aria-modal="true" aria-label="${price?'가격':'시술 시간'} 선택">
-  <div class="wheel-toolbar"><button type="button" class="wheel-cancel">취소</button><strong>${price?'가격':'시술 시간'} 선택</strong><button type="button" class="wheel-done">완료</button></div>
-  <div class="wheel-frame"><div class="wheel-highlight"></div>${makeColumn('a',firstOptions,price?'만':'시간')}${makeColumn('b',secondOptions,price?'천':'분')}</div>
-  <div class="wheel-result" aria-live="polite"></div>
+  <div class="wheel-frame"><div class="wheel-highlight"></div>${makeColumn('a',firstOptions,price?'만 원 단위':'시간 단위')}${makeColumn('b',secondOptions,price?'천 원 단위':'분 단위')}</div>
+  <div class="wheel-actions"><button type="button" class="wheel-cancel">재설정</button><button type="button" class="wheel-done" aria-label="선택 완료">✓</button></div>
   </section>`;
   document.body.appendChild(back);
   const columns=[...back.querySelectorAll('.wheel-col')];
   function currentValue(){return price?vals.a*10000+vals.b*1000:vals.a*60+vals.b}
-  const result=back.querySelector('.wheel-result');
-  function updateResult(){const n=currentValue();result.textContent=price?money(n):formatDuration(n)}
+  function updateResult(){}
   const rowHeight=44;
   columns.forEach((col,i)=>{
     const key=i?'b':'a',options=i?secondOptions:firstOptions;
@@ -73,7 +71,7 @@ function openServiceWheel(id,kind){
     });
   });
   requestAnimationFrame(()=>{columns[0].scrollTop=initialA*rowHeight;columns[1].scrollTop=secondOptions.indexOf(initialB)*rowHeight;updateResult()});
-  back.querySelector('.wheel-cancel').onclick=()=>back.remove();
+  back.querySelector('.wheel-cancel').onclick=()=>{columns.forEach((col,i)=>col.scrollTo({top:0,behavior:'smooth'}))};
   back.addEventListener('click',ev=>{if(ev.target===back)back.remove()});
   back.querySelector('.wheel-done').onclick=()=>{
     columns.forEach((col,i)=>{const options=i?secondOptions:firstOptions;vals[i?'b':'a']=options[Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/rowHeight)))]});
