@@ -14,3 +14,34 @@
 .setting-row .emoji img{width:40px;height:40px;object-fit:contain}
 .card{border-radius:19px}.segment{border-radius:16px}.primary{background:#007aff}
 @media(max-width:390px){.day-event{font-size:11px}.field label{flex-basis:95px}.month-cell{min-height:96px}}
+
+/* v0.2.1: tighter calendar; day details only in appointment modal */
+.calendar-root .wrap{padding:8px 12px 14px}
+.calendar-top{margin:2px 0 10px;gap:8px}
+.round-dark{width:40px;height:40px;font-size:21px}
+.calendar-root .segment{padding:4px;margin-bottom:8px;border-radius:15px}
+.calendar-root .segment button{padding:8px 4px;border-radius:11px;font-size:14px}
+.calendar-root .heading-nav{margin:5px 0 8px}
+.calendar-root .heading-nav strong{font-size:22px}
+.calendar-root .heading-nav button{font-size:27px;padding:0 8px}
+.calendar-root .weeknames{padding-bottom:4px;font-size:11px}
+.calendar-root .month-cell{min-height:69px;padding:3px 2px 2px}
+.calendar-root .day-num{font-size:16px;margin-bottom:2px;line-height:21px}
+.calendar-root .day-num.today{height:23px;width:23px;line-height:23px;margin-bottom:0}
+.calendar-root .day-count{font-size:10px;margin:0 0 1px}
+.calendar-root .mini-book{font-size:10px;padding:1px 2px;margin:1px 0;line-height:14px}
+.calendar-root .plus-count{font-size:10px;line-height:12px}
+.calendar-root .week-day{padding:3px 0;font-size:11px}
+.calendar-root .week-day strong{font-size:16px;margin:2px auto}
+.calendar-root .week-day.active strong{height:25px;width:25px;line-height:25px;margin:2px auto}
+.calendar-root .week-day small{font-size:10px}
+.calendar-root .day-head-summary{margin:0 0 4px}
+.calendar-root .calendar-grid-wrap{height:min(67dvh,640px);margin-top:3px}
+.calendar-root .hour-lab{height:60px}
+.calendar-root .schedule-area{background:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,#363840 59px,#363840 60px)}
+.appointment-backdrop{position:fixed;inset:0;z-index:20;background:#000a;display:flex;align-items:flex-end;justify-content:center;padding:14px 12px calc(14px + env(safe-area-inset-bottom))}
+.appointment-modal{position:relative;width:100%;max-width:650px;max-height:76dvh;overflow:auto;background:#15161d;border:1px solid #444651;border-radius:22px;padding:26px 12px 4px;box-shadow:0 12px 45px #0009}
+.appointment-modal .detail{margin:0;background:none;border:0;padding:0 4px 12px}
+.appointment-modal .detail h3{padding-right:42px;margin-bottom:8px}
+.modal-close{position:absolute;right:12px;top:7px;border:0;background:none;color:#ddd;font-size:28px;padding:2px 10px;z-index:1}
+@media(max-width:390px){.calendar-root .month-cell{min-height:66px}.calendar-root .day-num{font-size:15px}}
