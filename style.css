@@ -195,3 +195,8 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .wallet-auto-row{display:flex;align-items:center;gap:10px;margin:13px 0;font-size:14px;font-weight:700;}
 .wallet-auto-row input{width:20px;height:20px;accent-color:#087aff;}
 .member-usage input:disabled{opacity:.48;}
+
+/* v0.3.4: day view must occupy one full-width column, not the week layout's seven. */
+.calendar-root .week-columns.single-day{grid-template-columns:minmax(0,1fr)}
+.calendar-root .week-columns.single-day .week-column{border-right:0}
+.calendar-root .week-columns.single-day .day-event{left:8px;right:8px;min-width:0;overflow:hidden;overflow-wrap:anywhere}
