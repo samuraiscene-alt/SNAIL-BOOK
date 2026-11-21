@@ -163,3 +163,27 @@
 .member-history-item{font-size:12px;margin-top:9px}
 .member-history-item small{color:#8e9099}
 .member-history-item strong{white-space:nowrap}
+
+/* v0.3.1: customer detail modal and Korean-initials autocomplete */
+.client-list-button{width:100%;display:flex;align-items:center;justify-content:space-between;background:white;border:0;border-radius:16px;padding:17px 18px;margin:9px 0;text-align:left;color:#1c1c22}
+.client-list-button span:first-child{display:flex;flex-direction:column;gap:5px}
+.client-list-button b{font-size:17px}
+.client-list-button small{font-size:13px;color:#8c8d96}
+.client-list-chevron{font-size:27px;color:#999ba5}
+.client-detail-backdrop{position:fixed;inset:0;z-index:140;background:#0009;display:flex;align-items:center;justify-content:center;padding:22px;overscroll-behavior:contain}
+.client-detail-dialog{position:relative;width:100%;max-width:370px;background:#17181d;color:white;border:1px solid #444651;border-radius:25px;padding:26px 21px 20px;box-shadow:0 15px 45px #0009}
+.client-detail-dialog h2{margin:0 0 6px;font-size:23px}
+.client-detail-phone{margin:0 0 22px;color:#b6b8c4;font-size:15px}
+.client-detail-x{position:absolute;right:14px;top:9px;background:none;color:#bbb;border:0;font-size:27px;padding:6px}
+.client-detail-stat{display:flex;align-items:center;justify-content:space-between;padding:15px 2px;border-top:1px solid #363740;font-size:15px}
+.client-detail-stat strong{font-size:18px}
+.client-detail-credit{color:#84b7ff}
+.client-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.client-detail-actions button{flex:1 1 45%;background:#31333b;border:1px solid #50535e;border-radius:12px;color:white;padding:11px 5px;font-size:12px;font-weight:700}
+.client-detail-actions .client-delete{color:#ff9eaa}
+.client-autocomplete{width:100%;min-width:0;position:relative}
+.client-autocomplete input{width:100%}
+.client-suggestions{position:absolute;z-index:35;top:calc(100% + 5px);right:0;left:0;border:1px solid #e0e1e9;background:white;box-shadow:0 12px 28px #0002;border-radius:13px;padding:4px;max-height:270px;overflow-y:auto}
+.client-suggestions[hidden]{display:none}
+.client-suggestion{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:#f6f6f9;border:0;border-radius:9px;padding:10px 12px;margin:3px 0;color:#8e9099;font-size:15px;font-weight:650}
+.client-suggestion small{font-size:12px;color:#a2a3ab}
