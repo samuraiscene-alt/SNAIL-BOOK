@@ -287,3 +287,13 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .closed-day-choice input{width:17px;height:17px;min-width:17px;margin:0;accent-color:#347dff}
 .closed-day-choice span{flex:none}
 @media(max-width:350px){.closed-days-grid{gap:6px}.closed-day-choice{font-size:13px;padding:7px 2px}}
+
+/* v0.4.0: multi-select weekday wheel in hours settings */
+.closed-days-picker{margin-top:12px}
+.closed-days-trigger{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:48px;border:1px solid #cbd8ed;border-radius:12px;background:#f5f6fb;color:#087aff;text-align:left;padding:10px 14px;font-size:15px;font-weight:700}
+.closed-days-trigger span:last-child{font-size:24px;color:#8e909a}
+.closed-days-sheet{padding:16px 12px 12px}
+.closed-days-frame{height:220px}
+.closed-days-column .wheel-option{font-size:21px}
+.closed-days-add{margin-top:12px}
+.closed-days-picked{margin:12px 0;min-height:36px}
