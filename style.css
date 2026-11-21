@@ -240,3 +240,19 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
  align-self:flex-start;
  flex:1 1 0;
 }
+
+/* v0.3.7: compact two-digit time gutter shared by week and day views. */
+.calendar-root .hour-labels{
+ width:38px;
+ flex:0 0 38px;
+}
+.calendar-root .hour-lab{
+ height:60px;
+ padding:3px 0 0;
+ text-align:center;
+ font-variant-numeric:tabular-nums;
+ font-size:12px;
+}
+.calendar-root .week-days{
+ padding-left:38px;
+}
