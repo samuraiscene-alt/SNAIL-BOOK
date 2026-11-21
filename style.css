@@ -146,3 +146,20 @@
 .treatment-tag{background:#666970;border-radius:13px;color:white;font-size:12px;padding:5px 7px}
 .treatment-tag button{border:0;background:none;color:white;font-size:16px}
 .treatment-empty{font-size:12px;color:#ddd}
+
+/* v0.3.0 membership graph in booking registration */
+.member-section{padding:16px}
+.member-chip{background:#e6f5eb;color:#25834c;border-radius:15px;padding:4px 9px;font-size:12px;font-weight:750}
+.member-balance{background:#f0f1f6;border-radius:16px;padding:16px;margin:14px 0}
+.member-total{font-size:30px;font-weight:850;color:#087aff;margin:9px 0}
+.member-track{height:9px;border-radius:20px;background:#dedfe6;overflow:hidden}
+.member-bar{height:100%;background:#3b82f6;border-radius:20px}
+.member-sums{font-size:12px;color:#7d7e89;margin-top:9px}
+.member-usage{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.member-usage label{font-size:14px;font-weight:700}
+.member-usage input{width:42%;background:#f3f3f8;border:0;border-radius:10px;padding:12px;text-align:right;color:#087aff;font-weight:700}
+.member-section .note{margin:8px 0 12px}
+.member-history{border-top:1px solid #e5e6ea;padding-top:11px}
+.member-history-item{font-size:12px;margin-top:9px}
+.member-history-item small{color:#8e9099}
+.member-history-item strong{white-space:nowrap}
