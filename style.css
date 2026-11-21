@@ -69,3 +69,8 @@
 .calendar-root .wrap:has(> .month-grid){
   padding-top:max(64px, calc(env(safe-area-inset-top) + 8px));
 }
+
+/* v0.2.4: apply the same status-bar clearance to week/day headers. */
+.calendar-root .wrap:not(:has(> .month-grid)){
+  padding-top:max(64px, calc(env(safe-area-inset-top) + 8px));
+}
