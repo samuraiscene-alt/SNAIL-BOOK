@@ -215,3 +215,28 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .calendar-root .week-columns.single-day{grid-template-columns:minmax(0,1fr)}
 /* All 24 hours exist in day view; its grid scrolls inside the available height. */
 .calendar-root .calendar-grid-wrap{overscroll-behavior:contain}
+
+/* v0.3.6: full opening and closing time labels; keep scrollable 24:00 boundary visible. */
+.calendar-root .calendar-grid-wrap{
+ overflow-y:auto;
+ overflow-x:hidden;
+ overscroll-behavior-y:contain;
+ scroll-padding-top:0;
+}
+.calendar-root .hour-labels{
+ align-self:flex-start;
+ flex:0 0 60px;
+ padding-top:0;
+ padding-bottom:0;
+}
+.calendar-root .hour-lab{
+ height:60px;
+ transform:none;
+ line-height:20px;
+ padding:3px 7px 0 0;
+ white-space:nowrap;
+}
+.calendar-root .schedule-area{
+ align-self:flex-start;
+ flex:1 1 0;
+}
