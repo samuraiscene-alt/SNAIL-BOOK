@@ -127,3 +127,8 @@
 .wheel-actions button{cursor:pointer;}
 .wheel-cancel{background:#242529;border:1px solid #ddd;color:white;font-size:16px;font-weight:700;padding:10px 16px;border-radius:24px}
 .wheel-done{border:2px solid #cce5ff;background:#9bc8ff;color:#050505;border-radius:50%;width:47px;height:47px;font-size:31px;font-weight:900;line-height:1}
+
+/* v0.2.8: prevent background page dragging while using service wheels on iOS. */
+.wheel-backdrop{overscroll-behavior:contain;touch-action:none;}
+.wheel-col{overscroll-behavior:contain;touch-action:pan-y;}
+.wheel-sheet{overscroll-behavior:contain;}
