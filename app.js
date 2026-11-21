@@ -37,7 +37,7 @@ function openServiceWheel(id,kind){
   const s=store.services.find(v=>v.id===id);if(!s)return;
   document.querySelector('.wheel-backdrop')?.remove();
   const price=kind==='price',current=price?Math.max(0,Number(s.price)||0):Math.max(0,Number(s.minutes)||0);
-  const firstOptions=Array.from({length:201},(_,i)=>i);
+  const firstOptions=Array.from({length:price?201:13},(_,i)=>i);
   const secondOptions=Array.from({length:price?10:6},(_,i)=>price?i:i*10);
   const initialA=price?Math.min(200,Math.floor(current/10000)):Math.min(12,Math.floor(current/60));
   const initialB=price?Math.min(9,Math.floor((current%10000)/1000)):Math.min(50,Math.round((current%60)/10)*10);
