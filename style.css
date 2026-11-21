@@ -100,3 +100,30 @@
 .wheel-option,.wheel-pad{height:44px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;font-size:21px;font-weight:550}
 .wheel-pad{height:88px;scroll-snap-align:none}
 .wheel-result{text-align:center;font-size:17px;font-weight:700;color:#087aff;padding:12px 0}
+
+/* v0.2.6: match the centered dark time wheel; numeric columns only. */
+.wheel-backdrop{
+ align-items:center;
+ padding:20px;
+ background:rgba(0,0,0,.34);
+}
+.wheel-sheet{
+ width:min(100%,340px);max-width:340px;
+ background:linear-gradient(180deg,#44464a 0%,#414348 70%,#45474a 100%);
+ color:#f7f7fa;border:1px solid #8b8c91;
+ border-radius:33px;
+ padding:17px 8px 9px;
+ box-shadow:0 18px 50px rgba(0,0,0,.24);
+}
+.wheel-frame{
+ height:220px;gap:8px;
+ mask-image:linear-gradient(to bottom,transparent 0%,#000 28%,#000 72%,transparent 100%);
+ -webkit-mask-image:linear-gradient(to bottom,transparent 0%,#000 28%,#000 72%,transparent 100%);
+}
+.wheel-highlight{background:#666a71;border-radius:16px;left:0;right:0;}
+.wheel-option{font-size:25px;font-weight:600;color:#f5f5f8;}
+.wheel-col{scrollbar-width:none;touch-action:pan-y;}
+.wheel-actions{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 0;}
+.wheel-actions button{cursor:pointer;}
+.wheel-cancel{background:#242529;border:1px solid #ddd;color:white;font-size:16px;font-weight:700;padding:10px 16px;border-radius:24px}
+.wheel-done{border:2px solid #cce5ff;background:#9bc8ff;color:#050505;border-radius:50%;width:47px;height:47px;font-size:31px;font-weight:900;line-height:1}
