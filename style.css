@@ -132,3 +132,17 @@
 .wheel-backdrop{overscroll-behavior:contain;touch-action:none;}
 .wheel-col{overscroll-behavior:contain;touch-action:pan-y;}
 .wheel-sheet{overscroll-behavior:contain;}
+
+/* v0.2.9: centered dark multi-select treatment wheel */
+.service-choose-button{width:100%;border:1px solid #c4d3ec;border-radius:12px;background:#f0f5ff;color:#087aff;padding:13px;margin:14px 0 10px;font-size:15px;font-weight:700;display:flex;justify-content:space-between}
+.selected-treatments{display:flex;flex-direction:column;gap:7px;margin:5px 0}
+.selected-treatment{display:flex;justify-content:space-between;gap:9px;align-items:center;border-radius:9px;padding:9px 10px;background:#f3f5fa;font-size:13px}
+.selected-treatment button{border:0;background:none;color:#d52b4d;font-size:21px}
+.treatment-heading{text-align:center;font-weight:700;color:white;font-size:16px;margin:0 0 8px}
+.treatment-option{font-size:20px}
+.treatment-current{text-align:center;color:#eee;font-size:13px;margin:9px 0}
+.treatment-add{display:block;width:100%;border:1px solid #8cbafa;background:#305d98;color:white;border-radius:12px;padding:12px 8px;font-size:15px;font-weight:700}
+.treatment-picked{min-height:38px;max-height:100px;overflow:auto;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin:9px 0}
+.treatment-tag{background:#666970;border-radius:13px;color:white;font-size:12px;padding:5px 7px}
+.treatment-tag button{border:0;background:none;color:white;font-size:16px}
+.treatment-empty{font-size:12px;color:#ddd}
