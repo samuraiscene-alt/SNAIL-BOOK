@@ -256,3 +256,27 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .calendar-root .week-days{
  padding-left:38px;
 }
+
+/* v0.3.8: overlay calendar menu and search without changing grid dimensions */
+.calendar-popup-backdrop{
+ position:fixed;inset:0;z-index:45;background:rgba(0,0,0,.68);
+ display:flex;align-items:center;justify-content:center;
+ padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+ overscroll-behavior:contain;touch-action:none;
+}
+.calendar-popup{
+ width:100%;max-width:420px;max-height:min(75dvh,640px);
+ display:flex;flex-direction:column;overflow:hidden;
+ padding:18px;border-radius:22px;border:1px solid #494b57;
+ background:#18191f;color:#fff;box-shadow:0 18px 45px #0009;
+ touch-action:auto;
+}
+.calendar-popup-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.calendar-popup-title h3{font-size:19px;margin:0;font-weight:750}
+.calendar-popup-title button{background:none;border:0;color:#e4e5ec;font-size:27px;line-height:1;padding:2px 8px}
+.calendar-popup .search{background:#2b2d35;color:#fff;border:1px solid #424551;flex:0 0 auto;margin-bottom:12px}
+.calendar-popup .search::placeholder{color:#a5a8b4}
+.calendar-popup #searchResults{overflow:auto;min-height:0;overscroll-behavior:contain;touch-action:pan-y}
+.calendar-popup #searchResults .detail-row{min-width:0}
+.calendar-popup #searchResults .detail-row>span{min-width:0;overflow-wrap:anywhere}
+.calendar-menu-option{width:100%;border:0;border-radius:12px;background:#2a2c35;color:#fff;font-size:16px;font-weight:650;text-align:left;padding:15px;margin:4px 0}
