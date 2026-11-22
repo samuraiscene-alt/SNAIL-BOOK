@@ -364,3 +364,20 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 
 /* v0.4.9: show confirm only after at least one treatment is chosen */
 .treatment-wheel-backdrop .wheel-done[hidden]{display:none!important}
+
+/* v0.5.0 selective reset, all switches off by default */
+.reset-selection-card{padding:20px 16px}
+.reset-intro{color:#555968;font-size:14px;line-height:1.6;margin:0 0 14px}
+.reset-option{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 2px;border-bottom:1px solid #e6e7ed;cursor:pointer;min-height:74px}
+.reset-option-copy{display:flex;flex-direction:column;gap:5px;min-width:0}
+.reset-option-copy strong{color:#22252d;font-size:16px}
+.reset-option-copy small{color:#888b95;font-size:12px;line-height:1.35}
+.reset-option input{position:absolute;opacity:0;width:1px;height:1px}
+.reset-switch{width:52px;height:31px;border-radius:20px;background:#cfd1d7;flex:0 0 52px;position:relative;transition:background .15s}
+.reset-switch:after{content:"";position:absolute;width:25px;height:25px;top:3px;left:3px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:transform .15s}
+.reset-option input:checked+.reset-switch{background:#35c85a}
+.reset-option input:checked+.reset-switch:after{transform:translateX(21px)}
+.reset-option input:focus-visible+.reset-switch{outline:2px solid #347df5;outline-offset:2px}
+.reset-caution{color:#c44d58;font-size:12px;line-height:1.5;margin:15px 0 0}
+.reset-submit{margin-top:22px}
+.reset-submit:disabled{background:#bdc2ca!important;opacity:.7;cursor:not-allowed}
