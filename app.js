@@ -303,6 +303,78 @@ function salesPage(){
  '</div>';
 }
 
+function deleteReceipt(kind,id,clientId){
+ if(kind==='deposit'){
+  const client=findClient(clientId);
+  const deposits=client?.walletDeposits;
+  const record=deposits?.find(d=>String(d.id)===String(id));
+  if(!record)return;
+  const amount=Number(record.amount)||0;
+  const ledger=walletLedger(client);
+  if(ledger.balance-amount<0){alert('이 충전액은 이미 회원권 시술에 사용되어 삭제할 수 없습니다. 사용 내역부터 확인해 주세요.');return}
+  if(!confirm(client.name+'님의 회원권 충전 '+money(amount)+'을 삭제할까요?\n충전 기록과 수령액이 삭제되며 회원권 잔액도 줄어듭니다.'))return;
+  client.walletDeposits=deposits.filter(d=>String(d.id)!==String(id));
+ }else if(kind==='booking'){
+  const b=store.bookings.find(b=>String(b.id)===String(id));
+  if(!b)return;
+  if(!confirm(clientName(b)+'님의 '+b.date+' 시술 예약 전체를 삭제할까요?\n수령 내역뿐 아니라 예약·시술 기록도 삭제됩니다.'))return;
+  store.bookings=store.bookings.filter(x=>String(x.id)!==String(id));
+ }else return;
+ save();render();notify('수령 내역 삭제 완료');
+}
+function openReceipt(kind,id,clientId){
+ if(kind==='booking'){
+  const b=store.bookings.find(b=>String(b.id)===String(id));
+  if(!b)return;
+  editing=b.id;checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);
+  tab='booking';panel=null;render();
+ }else if(kind==='deposit'){
+  const client=findClient(clientId),d=client?.walletDeposits?.find(x=>String(x.id)===String(id));
+  if(!d)return;
+  alert('회원권 충전 기록은 현재 수정 기능이 없습니다. 잘못 충전한 내역은 왼쪽으로 밀어 삭제할 수 있습니다. 단, 이미 사용한 충전액은 보호됩니다.');
+ }
+}
+function bindReceiptSwipes(){
+ const rows=[...root.querySelectorAll('.receipt-swipe')];
+ let opened=null;
+ rows.forEach(row=>{
+  const content=row.querySelector('.receipt-swipe-content'),main=row.querySelector('[data-edit-receipt]'),remove=row.querySelector('[data-delete-receipt]');
+  const kind=row.dataset.receiptKind,id=row.dataset.receiptId,clientId=row.dataset.receiptClient;
+  let startX=0,startY=0,startOffset=0,tracking=false,axis=null,suppressClick=false;
+  function setOpen(on){row.classList.toggle('is-open',on);if(on){if(opened&&opened!==row)opened.classList.remove('is-open');opened=row}else if(opened===row)opened=null}
+  row.addEventListener('touchstart',e=>{
+   if(e.target.closest('[data-delete-receipt]'))return;
+   const t=e.touches[0];startX=t.clientX;startY=t.clientY;
+   startOffset=row.classList.contains('is-open')?-88:0;tracking=true;axis=null;suppressClick=false;
+  },{passive:true});
+  row.addEventListener('touchmove',e=>{
+   if(!tracking)return;
+   const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY;
+   if(!axis&&Math.max(Math.abs(dx),Math.abs(dy))>8)axis=Math.abs(dx)>Math.abs(dy)*1.3?'horizontal':'vertical';
+   if(axis!=='horizontal')return;
+   e.preventDefault();suppressClick=true;
+   const translate=Math.max(-88,Math.min(0,startOffset+dx));
+   content.style.transform='translateX('+translate+'px)';
+  },{passive:false});
+  row.addEventListener('touchend',e=>{
+   if(!tracking)return;tracking=false;
+   if(axis==='horizontal'){
+    const t=e.changedTouches[0],dx=t.clientX-startX;
+    const offset=Math.max(-88,Math.min(0,startOffset+dx));
+    content.style.transform='';
+    setOpen(offset < -44);
+    setTimeout(()=>{suppressClick=false},350);
+   }
+  },{passive:true});
+  row.addEventListener('touchcancel',()=>{tracking=false;content.style.transform=''}, {passive:true});
+  main.addEventListener('click',e=>{
+   if(suppressClick){e.preventDefault();return}
+   if(row.classList.contains('is-open')){setOpen(false);return}
+   openReceipt(kind,id,clientId);
+  });
+  remove.addEventListener('click',()=>deleteReceipt(kind,id,clientId));
+ });
+}
 function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자의 Google 계정으로 연결할 예정입니다. 연결 기능은 현재 미구현 상태입니다.');if(panel==='reset')return resetPage();const entries=[['google','icons/settings/google.png','Google 캘린더 연동'],['services','💅','서비스 가격'],['hours','🕒','예약 시간 설정'],['client','👥','고객 관리'],['backup','icons/settings/backup.png','백업 내보내기·가져오기'],['reset','icons/settings/reset.png','초기화']];return `<div class="wrap">${entries.map(([id,ic,label])=>`<button class="setting-row" data-panel="${id}"><span class="emoji">${ic.startsWith("icons/")?`<img src="${ic}" alt="">`:ic}</span><span>${label}</span><span class="arrow">›</span></button>`).join('')}</div>`}
 
 function resetPage(){
