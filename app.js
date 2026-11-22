@@ -271,15 +271,31 @@ function salesPeriodCard(period,label){
  const performed=store.bookings.filter(b=>b.status==='paid'&&b.date>=begin&&b.date<=end);
  const serviceTotal=performed.reduce((n,b)=>n+priceFor(b),0);
  const memberSpent=performed.reduce((n,b)=>n+Number(b.memberUse||0),0);
- const groups={};entries.forEach(x=>{(groups[x.clientId||x.name||'unknown']??=[]).push(x)});
- const customerHtml=Object.entries(groups).sort((a,b)=>
-   b[1].reduce((n,r)=>n+r.amount,0)-a[1].reduce((n,r)=>n+r.amount,0)).map(([id,rows])=>
-  '<details class="accordion receipt-customer"><summary><span>'+esc(findClient(id)?.name||rows[0].name||'고객')+'</span><span>'+money(rows.reduce((n,r)=>n+r.amount,0))+' · '+rows.length+'건 ⌄</span></summary>'+
-   rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>
-    '<div class="receipt-swipe" data-receipt-kind="'+r.kind+'" data-receipt-id="'+esc(r.id)+'" data-receipt-client="'+esc(r.clientId)+'">'+
-    '<button type="button" class="receipt-swipe-delete" data-delete-receipt="1" aria-label="수령 내역 삭제">삭제</button>'+
-    '<div class="receipt-swipe-content"><button type="button" class="receipt-swipe-main" data-edit-receipt="1"><span>'+esc(r.date)+'<span class="sub">'+esc(r.service)+' · '+(r.method==='card'?'카드':r.method==='cash'?'현금':'결제 수단 미확인')+'</span></span><b>'+money(r.amount)+'</b></button></div></div>'
-   ).join('')+'</details>').join('')||'<div class="empty">해당 기간 수령 기록이 없습니다.</div>';
+ const memberEntries=performed.filter(b=>Number(b.memberUse)>0).map(b=>({id:b.id,date:b.date,name:clientName(b),service:serviceNames(b),amount:Number(b.memberUse),method:'member',kind:'member-use',clientId:b.clientId}));
+ const displayEntries=entries.concat(memberEntries);
+ const groups={};displayEntries.forEach(x=>{(groups[x.clientId||x.name||'unknown']??=[]).push(x)});
+ const customerHtml=Object.entries(groups).sort((a,b)=>{
+  const paidSum=rows=>rows.filter(r=>r.kind!=='member-use').reduce((n,r)=>n+r.amount,0);
+  return paidSum(b[1])-paidSum(a[1]);
+ }).map(([id,rows])=>{
+  const receipts=rows.filter(r=>r.kind!=='member-use'),used=rows.filter(r=>r.kind==='member-use');
+  const received=receipts.reduce((n,r)=>n+r.amount,0),spent=used.reduce((n,r)=>n+r.amount,0);
+  const displayName=esc(findClient(id)?.name||rows[0].name||'고객');
+  const headerName=receipts.length
+   ?'<span class="receipt-color-blue">'+displayName+'</span>'+(used.length?'<span class="receipt-color-red receipt-header-member-tag"> · 회원권 사용</span>':'')
+   :'<span class="receipt-color-red">'+displayName+'</span>';
+  const totals=(receipts.length?'<span class="receipt-color-blue">'+money(received)+'</span>':'')+
+   (used.length?'<span class="receipt-color-red">'+(receipts.length?' / ':'')+'−'+money(spent)+'</span>':'');
+  return '<details class="accordion receipt-customer"><summary><span>'+headerName+'</span><span class="receipt-header-totals">'+totals+' · '+rows.length+'건 ⌄</span></summary>'+
+   rows.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{
+    const member=r.kind==='member-use',kindLabel=member?'회원권 사용':r.method==='card'?'카드':r.method==='cash'?'현금':'결제 수단 미확인';
+    return '<div class="receipt-swipe '+(member?'receipt-member-use':'receipt-new-payment')+'" data-receipt-kind="'+r.kind+'" data-receipt-id="'+esc(r.id)+'" data-receipt-client="'+esc(r.clientId)+'">'+
+     '<button type="button" class="receipt-swipe-delete" data-delete-receipt="1" aria-label="내역 삭제">삭제</button>'+
+     '<div class="receipt-swipe-content"><button type="button" class="receipt-swipe-main" data-edit-receipt="1">'+
+     '<span><span class="receipt-row-name">'+displayName+'</span><span class="receipt-row-date">'+esc(r.date)+'</span><span class="sub">'+esc(r.service)+' · '+kindLabel+'</span></span>'+
+     '<b>'+(member?'−':'')+money(r.amount)+'</b></button></div></div>';
+   }).join('')+'</details>';
+ }).join('')||'<div class="empty">해당 기간 수령·회원권 사용 기록이 없습니다.</div>';
  return '<div class="sales-popup-period">'+
  '<div class="sales-popup-period-title">'+label+'</div>'+
  '<div class="sales-accordion-body">'+
@@ -291,8 +307,8 @@ function salesPeriodCard(period,label){
  (unknown?'<p class="receipts-unknown">결제 수단 미확인 '+money(unknown)+' · 이전 기록 확인 필요</p>':'')+'</div>'+
  '<details class="sales-performance"><summary>완료한 시술 · '+performed.length+'건 <span>⌄</span></summary>'+
  '<div class="sales-performance-info"><div><span>시술 실적</span><b>'+money(serviceTotal)+'</b></div>'+
- '<div><span>회원권 사용액</span><b>'+money(memberSpent)+'</b></div></div></details>'+
- '<div class="section-title">고객별 수령 내역 · '+entries.length+'건</div>'+customerHtml+
+ '<div><span>회원권 사용액</span><b class="receipt-color-red">'+money(memberSpent)+'</b></div></div></details>'+
+ '<div class="section-title">고객별 수령·사용 내역 · '+displayEntries.length+'건</div>'+customerHtml+
  '</div></div>';
 }
 function salesPage(){
@@ -319,7 +335,7 @@ function deleteReceipt(kind,id,clientId){
   if(ledger.balance-amount<0){alert('이 충전액은 이미 회원권 시술에 사용되어 삭제할 수 없습니다. 사용 내역부터 확인해 주세요.');return}
   if(!confirm(client.name+'님의 회원권 충전 '+money(amount)+'을 삭제할까요?\n충전 기록과 수령액이 삭제되며 회원권 잔액도 줄어듭니다.'))return;
   client.walletDeposits=deposits.filter(d=>String(d.id)!==String(id));
- }else if(kind==='booking'){
+ }else if(kind==='booking'||kind==='member-use'){
   const b=store.bookings.find(b=>String(b.id)===String(id));
   if(!b)return;
   if(!confirm(clientName(b)+'님의 '+b.date+' 시술 예약 전체를 삭제할까요?\n수령 내역뿐 아니라 예약·시술 기록도 삭제됩니다.'))return;
@@ -328,7 +344,7 @@ function deleteReceipt(kind,id,clientId){
  save();render();notify('수령 내역 삭제 완료');
 }
 function openReceipt(kind,id,clientId){
- if(kind==='booking'){
+ if(kind==='booking'||kind==='member-use'){
   const b=store.bookings.find(b=>String(b.id)===String(id));
   if(!b)return;
   editing=b.id;checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);
