@@ -458,7 +458,7 @@ function openTreatmentWheel(){
     '<div class="treatment-heading">'+(treatmentGender==='W'?'여자':'남자')+' · '+treatmentCategory+'</div>'+
     '<div class="wheel-frame treatment-frame"><div class="wheel-highlight"></div><div class="wheel-col treatment-col"><div class="wheel-pad"></div>'+optionHtml+'<div class="wheel-pad"></div></div></div>'+
     '<div class="treatment-picked"></div>'+
-    '<div class="wheel-actions"><button type="button" class="wheel-cancel">취소</button><button type="button" class="wheel-done" aria-label="선택 완료">✓</button></div></section>';
+    '<div class="wheel-actions"><button type="button" class="wheel-cancel">취소</button><button type="button" class="wheel-done" aria-label="선택 완료" hidden>✓</button></div></section>';
   document.body.appendChild(back);
   const y=window.scrollY;
   const prior={position:document.body.style.position,top:document.body.style.top,left:document.body.style.left,right:document.body.style.right,width:document.body.style.width};
@@ -467,9 +467,11 @@ function openTreatmentWheel(){
   back.addEventListener('touchmove',e=>{if(!e.target.closest('.treatment-col'))e.preventDefault()},{passive:false});
   const col=back.querySelector('.treatment-col');
   const picked=back.querySelector('.treatment-picked');
+  const done=back.querySelector('.wheel-done');
   function refresh(){
     const s=options[currentIndex];
     picked.innerHTML=[...draft].map(id=>{const t=store.services.find(x=>x.id===id);return t?'<span class="treatment-tag">'+esc(t.name)+' <button type="button" data-draft-remove="'+t.id+'" aria-label="제거">×</button></span>':''}).join('');
+    done.hidden=draft.size===0;
   }
   col.addEventListener('scroll',()=>{
     currentIndex=Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/44)));
@@ -488,7 +490,8 @@ function openTreatmentWheel(){
   picked.onclick=e=>{const el=e.target.closest('[data-draft-remove]');if(el){draft.delete(el.dataset.draftRemove);refresh()}};
   back.querySelector('.wheel-cancel').onclick=()=>{close();tempForm=null};
   back.addEventListener('click',e=>{if(e.target===back){close();tempForm=null}});
-  back.querySelector('.wheel-done').onclick=()=>{
+  done.onclick=()=>{
+    if(!draft.size)return;
     checkedServices=[...draft];recalcTreatmentEnd();close();render();restoreForm();
   };
   requestAnimationFrame(refresh);
