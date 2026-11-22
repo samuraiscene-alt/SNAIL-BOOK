@@ -748,13 +748,13 @@ function chargeMember(id){
  dlg.className='member-charge-backdrop';
  dlg.innerHTML='<section class="member-charge-dialog" role="dialog" aria-modal="true" aria-label="회원권 충전 금액 및 결제 수단">'+
  '<h3>회원권 충전</h3>'+
- '<div class="member-charge-wheel-label">충전 금액 (만원)</div>'+
+
  '<div class="member-charge-wheel-frame"><div class="member-charge-wheel-highlight"></div>'+
  '<div class="member-charge-wheel-list" role="listbox" aria-label="충전 금액 선택">'+
  '<div class="member-charge-wheel-pad"></div>'+
  units.map((n,i)=>'<div class="member-charge-wheel-option" role="option" data-charge-index="'+i+'" aria-selected="false">'+String(n).padStart(2,'0')+'</div>').join('')+
  '<div class="member-charge-wheel-pad"></div></div></div>'+
- '<h4 class="member-charge-method-label">회원권 충전 결제 수단</h4>'+
+
  '<div class="member-charge-methods">'+
  '<button type="button" class="member-charge-method" data-charge-method="cash" aria-pressed="false">현금</button>'+
  '<button type="button" class="member-charge-method" data-charge-method="card" aria-pressed="false">카드</button></div>'+
@@ -944,5 +944,5 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=059',{updateViaCache:'none'}).catch(()=>{}));render();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=060',{updateViaCache:'none'}).catch(()=>{}));render();
 })();
