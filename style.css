@@ -426,3 +426,10 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .sales-popup-scroll .sales-range-nav{border-top:0}
 .sales-popup-scroll .sales-accordion-body>.section-title{margin-top:8px}
 .sales-popup-scroll .receipt-swipe-main{font-size:13px}
+
+/* v0.5.4: modal details auto-position, constrained height and readable amounts */
+.sales-popup-scroll{scroll-padding-top:10px;scroll-padding-bottom:18px;padding-bottom:26px}
+.sales-popup-scroll .receipt-customer{scroll-margin-top:10px;scroll-margin-bottom:16px}
+.sales-popup-panel{max-height:min(82dvh,790px)}
+.sales-popup-scroll .receipt-swipe-main{min-width:0;gap:8px}
+.sales-popup-scroll .receipt-swipe-main b{white-space:nowrap}
