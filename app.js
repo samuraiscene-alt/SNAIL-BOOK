@@ -155,8 +155,61 @@ function bindWalletAutoPayment(){
  update(false);
 }
 function bookingPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자가 설치한 기기에서 연동할 예정입니다. 현재 버전은 캘린더 연동 기능을 실행하지 않습니다.');const b=editing?store.bookings.find(x=>x.id===editing):null;let client=b?findClient(b.clientId):null;let local=editing?b:null;let selections=checkedServices.map(id=>store.services.find(x=>x.id===id)).filter(Boolean),total=selections.reduce((a,s)=>a+Number(s.price),0)+extras.reduce((a,e)=>a+Number(e.amount),0);return `<div class="wrap"><h2 class="form-title">${b?'시술 예약 수정':'시술 예약 등록'}</h2><div class="card"><div class="field"><label>고객 이름</label><div class="client-autocomplete"><input id="name" autocomplete="off" placeholder="고객 이름 또는 초성 입력" value="${esc(client?.name||local?.name||'')}"><div id="clientSuggestions" class="client-suggestions" hidden></div></div></div><div class="field"><label>연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" value="${esc(client?.phone||local?.phone||'')}"></div><div class="field"><label>시술일</label><input id="date" type="date" value="${esc(local?.date||selected)}"></div><div class="field"><label>시술시간</label><input id="start" type="time" value="${esc(local?.start||store.settings.open)}"></div><div class="field"><label>종료시간</label><input id="end" type="time" value="${esc(local?.end||hour(mins(store.settings.open)+60))}"></div></div><div id="membershipMount"></div><div class="card"><div class="row"><b>시술 내역</b><span class="muted">복수 선택 가능</span></div><button type="button" class="service-choose-button" data-treatment-open="1">시술 선택 · 추가 <span>›</span></button><div class="selected-treatments">${selections.map(s=>`<div class="selected-treatment"><span>${esc(s.name)} · ${money(s.price)} · ${s.minutes}분</span><button type="button" data-treatment-remove="${s.id}" aria-label="선택 해제">×</button></div>`).join('')||'<div class="muted">선택된 시술이 없습니다.</div>'}</div><div class="row" style="margin-top:13px"><span class="muted">선택 시술 예상 시간</span><b>${selections.reduce((a,s)=>a+Number(s.minutes),0)}분</b></div></div><div class="card"><div class="row"><b>그 외 추가 비용·할인</b><button class="secondary" data-add-extra="1">+ 항목 추가</button></div>${extras.map((e,i)=>`<div class="field"><input aria-label="추가 항목 이름" data-extra-name="${i}" placeholder="추가 아트·할인" value="${esc(e.name)}"><input aria-label="추가 금액" data-extra-amount="${i}" type="number" placeholder="할인 시 음수" value="${e.amount}"><button class="danger" data-remove-extra="${i}">×</button></div>`).join('')}<div class="row" style="margin-top:15px"><b>예상 결제 금액</b><b style="font-size:22px;color:#087aff">${money(total)}</b></div></div><div class="card"><div class="field"><label>진행 상태</label><select id="status"><option value="reserved" ${!local||local.status==='reserved'?'selected':''}>예약</option><option value="paid" ${local?.status==='paid'?'selected':''}>완료</option>${local?.status==='done'?'<option value="done" selected>기존 시술 완료 · 정산 전</option>':''}<option value="cancelled" ${local?.status==='cancelled'?'selected':''}>예약 취소</option><option value="noshow" ${local?.status==='noshow'?'selected':''}>노쇼</option></select></div><div class="payment-method-block"><b>결제 방법</b><div class="payment-switch-row"><label class="payment-switch-option"><span>카드</span><input type="checkbox" id="payCard" ${local?.paymentMethod==='card'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label><label class="payment-switch-option"><span>현금</span><input type="checkbox" id="payCash" ${local?.paymentMethod==='cash'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label></div><p class="payment-note">처음에는 둘 다 꺼져 있습니다. 완료 시 결제 방법을 선택하세요.</p></div><div class="field"><label>고객 메모</label><textarea id="memo" placeholder="시술 및 고객 특이사항">${esc(local?.memo||'')}</textarea></div></div><button class="primary" data-save-booking="1">${b?'수정 내용 저장':'시술 금액 계산·예약 저장'}</button>${b?`<button class="danger" style="width:100%" data-delete-booking="${b.id}">예약 삭제</button><button class="ghost" style="width:100%;margin-top:10px" data-new="1">새 예약 등록</button>`:''}<p class="note">예약 시점에는 매출에 포함되지 않습니다. ‘완료’로 저장하면 시술 매출과 회원권 사용액이 한 번에 정산됩니다.</p></div>`}
+
+/* Cash receipts: deposits count on their deposit date; prepaid redemption is not a new receipt. */
+function receiptMethod(method){return method==='cash'?'cash':method==='card'?'card':'unknown'}
+function bookingReceipt(b){return b.status==='paid'?Math.max(0,priceFor(b)-Math.max(0,Number(b.memberUse)||0)):0}
+function cashEntries(begin,end){
+ const records=[];
+ for(const c of store.clients){
+  for(const d of (Array.isArray(c.walletDeposits)?c.walletDeposits:[])){
+   if(d.date>=begin&&d.date<=end&&Number(d.amount)>0)
+    records.push({id:d.id,date:d.date,name:c.name,service:'회원권 충전',amount:Number(d.amount),method:receiptMethod(d.paymentMethod),kind:'deposit',clientId:c.id});
+  }
+ }
+ for(const b of store.bookings){
+  if(b.status!=='paid')continue;
+  const amount=bookingReceipt(b),date=b.paymentDate||b.date;
+  if(amount>0&&date>=begin&&date<=end)
+   records.push({id:b.id,date,name:clientName(b),service:serviceNames(b),amount,method:receiptMethod(b.paymentMethod),kind:'booking',clientId:b.clientId});
+ }
+ return records;
+}
+
 function sumFor(b){return priceFor(b)}
-function salesPage(){let period=panel==='week'?'week':panel==='year'?'year':'month';let today=selected;let current=cursor;let begin,end,title;if(period==='week'){begin=weekStart(today);end=shift(begin,6);title=begin.slice(5)+' ~ '+end.slice(5)}else if(period==='year'){begin=`${current.getFullYear()}-01-01`;end=`${current.getFullYear()}-12-31`;title=current.getFullYear()+'년'}else{begin=`${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}-01`;end=localDate(new Date(current.getFullYear(),current.getMonth()+1,0));title=`${current.getFullYear()}년 ${current.getMonth()+1}월`}let bs=store.bookings.filter(b=>b.status==='paid'&&b.date>=begin&&b.date<=end),sum=bs.reduce((x,b)=>x+sumFor(b),0),groups={};bs.forEach(b=>{let k=b.clientId||b.name||'unknown';(groups[k]??=[]).push(b)});return `<div class="wrap"><div class="segment">${[['week','주간'],['month','월간'],['year','연간']].map(([k,v])=>`<button data-sales-period="${k}" class="${period===k?'active':''}">${v}</button>`).join('')}</div><div class="card row"><span class="muted">조회 기간</span><span class="row-actions"><button class="small-button" data-sales-move="-1">‹</button><b>${title}</b><button class="small-button" data-sales-move="1">›</button></span></div><div class="card"><div class="muted">${title} 매출 합계</div><div class="stat">${money(sum)}</div><div class="muted">시술 기록 ${bs.length}건</div></div><div class="section-title">고객별 매출</div>${Object.entries(groups).sort((a,b)=>b[1].reduce((x,r)=>x+sumFor(r),0)-a[1].reduce((x,r)=>x+sumFor(r),0)).map(([id,rows])=>`<details class="accordion"><summary><span>${esc(findClient(id)?.name||rows[0].name||'고객')}</span><span>${money(rows.reduce((x,b)=>x+sumFor(b),0))} · ${rows.length}회 ⌄</span></summary>${rows.sort((a,b)=>b.date.localeCompare(a.date)).map(b=>`<button class="detail-row" style="color:#202127" data-edit="${b.id}"><span>${b.date}<div class="sub">${esc(serviceNames(b))}</div></span><b>${money(sumFor(b))}</b></button>`).join('')}</details>`).join('')||'<div class="empty">해당 기간 결제 완료 내역이 없습니다.</div>'}</div>`}
+function salesPage(){
+ let period=panel==='week'?'week':panel==='year'?'year':'month';
+ let today=selected,current=cursor,begin,end,title;
+ if(period==='week'){begin=weekStart(today);end=shift(begin,6);title=begin.slice(5)+' ~ '+end.slice(5)}
+ else if(period==='year'){begin=current.getFullYear()+'-01-01';end=current.getFullYear()+'-12-31';title=current.getFullYear()+'년'}
+ else{begin=current.getFullYear()+'-'+String(current.getMonth()+1).padStart(2,'0')+'-01';end=localDate(new Date(current.getFullYear(),current.getMonth()+1,0));title=current.getFullYear()+'년 '+(current.getMonth()+1)+'월'}
+ const entries=cashEntries(begin,end);
+ const total=entries.reduce((n,x)=>n+x.amount,0);
+ const cash=entries.filter(x=>x.method==='cash').reduce((n,x)=>n+x.amount,0);
+ const card=entries.filter(x=>x.method==='card').reduce((n,x)=>n+x.amount,0);
+ const unknown=total-cash-card;
+ const performed=store.bookings.filter(b=>b.status==='paid'&&b.date>=begin&&b.date<=end);
+ const serviceTotal=performed.reduce((n,b)=>n+priceFor(b),0);
+ const memberSpent=performed.reduce((n,b)=>n+Number(b.memberUse||0),0);
+ const groups={};entries.forEach(x=>{(groups[x.clientId||x.name||'unknown']??=[]).push(x)});
+ return '<div class="wrap">'+
+ '<div class="segment">'+[['week','주간'],['month','월간'],['year','연간']].map(([k,v])=>'<button data-sales-period="'+k+'" class="'+(period===k?'active':'')+'">'+v+'</button>').join('')+'</div>'+
+ '<div class="card row"><span class="muted">조회 기간</span><span class="row-actions"><button class="small-button" data-sales-move="-1">‹</button><b>'+title+'</b><button class="small-button" data-sales-move="1">›</button></span></div>'+
+ '<div class="card"><div class="muted">'+title+' 실제 수령액</div><div class="stat">'+money(total)+'</div>'+
+ '<div class="receipts-split"><div><small>현금</small><strong>'+money(cash)+'</strong></div><div><small>카드</small><strong>'+money(card)+'</strong></div></div>'+
+ (unknown?'<p class="receipts-unknown">결제 수단 미확인 '+money(unknown)+' · 이전 기록 확인 필요</p>':'')+
+ '<p class="note">회원권 충전은 충전일에만 포함하고, 회원권 사용액은 다시 더하지 않습니다.</p></div>'+
+ '<div class="card"><div class="row"><span class="muted">시술 실적 (수령액에 중복 합산하지 않음)</span><b>'+money(serviceTotal)+'</b></div>'+
+ '<div class="row" style="margin-top:9px"><span class="muted">완료한 시술</span><b>'+performed.length+'건</b></div>'+
+ '<div class="row" style="margin-top:9px"><span class="muted">회원권 사용액</span><b>'+money(memberSpent)+'</b></div></div>'+
+ '<div class="section-title">고객별 수령 내역</div>'+
+ (Object.entries(groups).sort((a,b)=>b[1].reduce((n,r)=>n+r.amount,0)-a[1].reduce((n,r)=>n+r.amount,0)).map(([id,rows])=>
+ '<details class="accordion"><summary><span>'+esc(findClient(id)?.name||rows[0].name||'고객')+'</span><span>'+money(rows.reduce((n,r)=>n+r.amount,0))+' · '+rows.length+'건 ⌄</span></summary>'+
+ rows.sort((a,b)=>b.date.localeCompare(a.date)).map(r=>
+ '<div class="detail-row receipt-detail"><span>'+esc(r.date)+'<div class="sub">'+esc(r.service)+' · '+(r.method==='card'?'카드':r.method==='cash'?'현금':'결제 수단 미확인')+'</div></span><b>'+money(r.amount)+'</b></div>'
+ ).join('')+'</details>').join('')||'<div class="empty">해당 기간 실제 수령 기록이 없습니다.</div>')+
+ '</div>';
+}
 function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자의 Google 계정으로 연결할 예정입니다. 연결 기능은 현재 미구현 상태입니다.');if(panel==='reset')return simplePanel('초기화',`<p>모든 예약, 고객, 서비스와 설정을 초기화합니다.</p><button class="danger" data-reset="1">전체 데이터 초기화</button>`);const entries=[['google','icons/settings/google.png','Google 캘린더 연동'],['services','💅','서비스 가격'],['hours','🕒','예약 시간 설정'],['client','👥','고객 관리'],['backup','icons/settings/backup.png','백업 내보내기·가져오기'],['reset','icons/settings/reset.png','초기화']];return `<div class="wrap">${entries.map(([id,ic,label])=>`<button class="setting-row" data-panel="${id}"><span class="emoji">${ic.startsWith("icons/")?`<img src="${ic}" alt="">`:ic}</span><span>${label}</span><span class="arrow">›</span></button>`).join('')}</div>`}
 function panelHead(s){return `<div class="menu-head"><button data-back="1">‹</button><strong>${s}</strong></div>`}function simplePanel(title,content){return `<div class="wrap">${panelHead(title)}<div class="card">${content}</div></div>`}
 function formatDuration(n){const h=Math.floor(n/60),m=n%60;return h?(h+'시간'+(m?' '+m+'분':'')):(m+'분')}
@@ -364,9 +417,13 @@ function chargeMember(id){
  const typed=prompt(client.name+' 회원권 충전 금액(원)','300000');if(typed===null)return;
  const amount=Number(typed.replace(/,/g,''));
  if(!Number.isSafeInteger(amount)||amount<=0||amount>50000000){alert('1원 이상 5천만원 이하 금액을 입력해 주세요.');return}
- if(!confirm(client.name+' 회원권에 '+money(amount)+' 충전 기록을 추가할까요?'))return;
+ const methodInput=prompt('회원권 충전 결제 수단을 입력하세요 (카드 / 현금)','카드');
+ if(methodInput===null)return;
+ const paymentMethod=methodInput.trim()==='카드'?'card':methodInput.trim()==='현금'?'cash':null;
+ if(!paymentMethod){alert('카드 또는 현금 중 하나를 입력하세요.');return}
+ if(!confirm(client.name+' 회원권 '+money(amount)+'을 '+(paymentMethod==='card'?'카드':'현금')+'으로 충전할까요?'))return;
  if(!Array.isArray(client.walletDeposits))client.walletDeposits=[];
- client.walletDeposits.push({id:uid(),amount,date:localDate(new Date()),createdAt:new Date().toISOString()});
+ client.walletDeposits.push({id:uid(),amount,paymentMethod,date:localDate(new Date()),createdAt:new Date().toISOString()});
  save();render();notify('회원권 충전 완료');
 }
 function editClient(id){
@@ -400,6 +457,6 @@ if(f.status==='paid'&&useWallet&&memberUse===0)memberUse=Math.min(available,tota
 if(memberUse>available||memberUse>totalDue){alert('회원권 잔액 또는 시술 금액보다 많이 사용할 수 없습니다.');return}
 const paymentMethod=root.querySelector('#payCard')?.checked?'card':root.querySelector('#payCash')?.checked?'cash':null;
 if(f.status==='paid'&&totalDue>memberUse&&!paymentMethod){alert('남은 결제 금액의 카드 또는 현금을 선택해 주세요.');return}
-const b={id:editing||uid(),paymentMethod,clientId:client.id,name,phone,date:f.date,start:f.start,end:f.end,items:checkedServices.map(id=>store.services.find(s=>s.id===id)).filter(Boolean).map(s=>clone(s)),extras:clone(extras),memberUse,status:f.status||'reserved',memo:f.memo||'',createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(editing)store.bookings=store.bookings.map(x=>x.id===editing?b:x);else store.bookings.push(b);save();selected=f.date;cursor=dateOf(selected);tab='calendar';panel=null;editing=null;checkedServices=[];extras=[];tempForm=null;render();notify('예약 저장 완료')}
+const b={id:editing||uid(),paymentMethod,paymentDate:f.status==='paid'?(old?.status==='paid'?old.paymentDate||old.date:f.date):null,clientId:client.id,name,phone,date:f.date,start:f.start,end:f.end,items:checkedServices.map(id=>store.services.find(s=>s.id===id)).filter(Boolean).map(s=>clone(s)),extras:clone(extras),memberUse,status:f.status||'reserved',memo:f.memo||'',createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(editing)store.bookings=store.bookings.map(x=>x.id===editing?b:x);else store.bookings.push(b);save();selected=f.date;cursor=dateOf(selected);tab='calendar';panel=null;editing=null;checkedServices=[];extras=[];tempForm=null;render();notify('예약 저장 완료')}
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));render();
 })();
