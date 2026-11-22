@@ -381,3 +381,31 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .reset-caution{color:#c44d58;font-size:12px;line-height:1.5;margin:15px 0 0}
 .reset-submit{margin-top:22px}
 .reset-submit:disabled{background:#bdc2ca!important;opacity:.7;cursor:not-allowed}
+
+/* v0.5.1: Extra-style independent weekly/monthly/yearly accordions */
+.sales-accordion-page{padding-bottom:26px}
+.sales-accordion{background:#fff;border-radius:20px;margin:0 0 12px;overflow:hidden}
+.sales-accordion-title{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:67px;padding:17px 20px;cursor:pointer;font-size:18px;font-weight:800;color:#202127}
+.sales-accordion-title::-webkit-details-marker{display:none}
+.sales-accordion-title::marker{content:""}
+.sales-accordion-chevron{color:#868b98;font-size:25px;line-height:1;transition:transform .18s}
+.sales-accordion[open]>.sales-accordion-title .sales-accordion-chevron{transform:rotate(180deg)}
+.sales-accordion-body{padding:0 16px 18px}
+.sales-range-nav{border-top:1px solid #edf0f4;padding:15px 0;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.sales-range-nav>span{font-size:13px;color:#8b8e9a}
+.sales-range-controls{display:flex;align-items:center;gap:6px;min-width:0}
+.sales-range-controls strong{font-size:15px;white-space:nowrap}
+.sales-range-controls button{border:0;background:#eef1f8;color:#2379ff;font-size:25px;width:35px;height:35px;border-radius:11px}
+.sales-overview{background:#f6f7fb;border-radius:14px;padding:16px 14px}
+.sales-overview .stat{font-size:31px;margin:7px 0 4px}
+.sales-overview .receipts-split{margin:12px 0 0}
+.sales-overview .receipts-split>div{background:#fff}
+.sales-performance{border:1px solid #ebedf2;border-radius:12px;margin-top:12px}
+.sales-performance>summary{list-style:none;padding:14px 12px;display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:700;cursor:pointer}
+.sales-performance>summary::-webkit-details-marker{display:none}
+.sales-performance-info{padding:0 12px 12px}
+.sales-performance-info>div{display:flex;justify-content:space-between;gap:8px;color:#545a67;font-size:13px;padding:8px 0}
+.sales-accordion-body>.section-title{padding:16px 0 9px;margin:0;font-size:16px}
+.sales-accordion-body .receipt-customer{background:#f7f8fb;padding:13px 11px;border-radius:13px;margin-bottom:8px}
+.sales-accordion-body .receipt-customer summary{font-size:14px}
+@media(max-width:360px){.sales-range-controls strong{font-size:13px}.sales-range-controls{gap:3px}.sales-overview .stat{font-size:27px}}
