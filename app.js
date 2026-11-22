@@ -740,14 +740,55 @@ function chargeMember(id){
  const typed=prompt(client.name+' 회원권 충전 금액(원)','300000');if(typed===null)return;
  const amount=Number(typed.replace(/,/g,''));
  if(!Number.isSafeInteger(amount)||amount<=0||amount>50000000){alert('1원 이상 5천만원 이하 금액을 입력해 주세요.');return}
- const methodInput=prompt('회원권 충전 결제 수단을 입력하세요 (카드 / 현금)','카드');
- if(methodInput===null)return;
- const paymentMethod=methodInput.trim()==='카드'?'card':methodInput.trim()==='현금'?'cash':null;
- if(!paymentMethod){alert('카드 또는 현금 중 하나를 입력하세요.');return}
- if(!confirm(client.name+' 회원권 '+money(amount)+'을 '+(paymentMethod==='card'?'카드':'현금')+'으로 충전할까요?'))return;
- if(!Array.isArray(client.walletDeposits))client.walletDeposits=[];
- client.walletDeposits.push({id:uid(),amount,paymentMethod,date:localDate(new Date()),createdAt:new Date().toISOString()});
- save();render();notify('회원권 충전 완료');
+ // The posted salon membership menu offers bonus credit only for these three face values.
+ const benefits={
+  200000:{cash:220000,card:205000},
+  300000:{cash:340000,card:320000},
+  500000:{cash:570000,card:550000}
+ };
+ const dlg=document.createElement('div');
+ dlg.className='member-charge-backdrop';
+ dlg.innerHTML='<section class="member-charge-dialog" role="dialog" aria-modal="true" aria-label="회원권 충전 결제 수단">'+
+ '<h3>회원권 충전 결제 수단</h3>'+
+ '<div class="member-charge-methods">'+
+ '<button type="button" class="member-charge-method" data-charge-method="cash" aria-pressed="false">현금</button>'+
+ '<button type="button" class="member-charge-method" data-charge-method="card" aria-pressed="false">카드</button></div>'+
+ '<div class="member-charge-preview" aria-live="polite"></div>'+
+ '<div class="member-charge-actions"><button type="button" class="member-charge-cancel">취소</button>'+
+ '<button type="button" class="member-charge-confirm" disabled>충전 저장</button></div></section>';
+ document.body.appendChild(dlg);
+ const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
+ let method=null,done=false;
+ const close=()=>{document.body.style.overflow=oldOverflow;dlg.remove()};
+ const preview=dlg.querySelector('.member-charge-preview'),confirmButton=dlg.querySelector('.member-charge-confirm');
+ const update=()=>{
+  dlg.querySelectorAll('[data-charge-method]').forEach(b=>{
+   const selected=b.dataset.chargeMethod===method;
+   b.classList.toggle('active',selected);
+   b.setAttribute('aria-pressed',selected?'true':'false');
+  });
+  confirmButton.disabled=!method;
+  const credited=method?(benefits[amount]?.[method]??amount):null;
+  preview.innerHTML='<div><span>실제 결제액</span><b>'+money(amount)+'</b></div>'+
+   '<div><span>서비스 혜택</span><b class="member-charge-bonus">'+(credited===null?'결제 수단을 선택하세요':'+ '+money(credited-amount))+'</b></div>'+
+   '<div><span>회원권 충전 잔액</span><b>'+(credited===null?'—':money(credited))+'</b></div>';
+ };
+ dlg.querySelectorAll('[data-charge-method]').forEach(b=>b.onclick=()=>{
+  method=method===b.dataset.chargeMethod?null:b.dataset.chargeMethod;update();
+ });
+ dlg.querySelector('.member-charge-cancel').onclick=close;
+ dlg.addEventListener('click',e=>{if(e.target===dlg)close()});
+ confirmButton.onclick=()=>{
+  if(!method||done)return;
+  const credited=benefits[amount]?.[method]??amount;
+  if(!confirm(client.name+' 회원권 '+money(amount)+'을 '+(method==='card'?'카드':'현금')+'으로 결제하고 '+money(credited)+' 충전할까요?'))return;
+  done=true;confirmButton.disabled=true;
+  if(!Array.isArray(client.walletDeposits))client.walletDeposits=[];
+  client.walletDeposits.push({id:uid(),amount,creditedAmount:credited,bonusAmount:credited-amount,
+   planAmount:benefits[amount]?amount:null,paymentMethod:method,date:localDate(new Date()),createdAt:new Date().toISOString()});
+  save();close();render();notify('회원권 충전 완료');
+ };
+ update();
 }
 function editClient(id){
  const c=findClient(id);if(!c)return;
