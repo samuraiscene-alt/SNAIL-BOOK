@@ -289,10 +289,10 @@ function salesPeriodCard(period,label){
  '<div class="sales-overview"><span class="muted">실제 수령액</span><div class="stat">'+money(total)+'</div>'+
  '<div class="receipts-split"><div><small>현금</small><strong>'+money(cash)+'</strong></div><div><small>카드</small><strong>'+money(card)+'</strong></div></div>'+
  (unknown?'<p class="receipts-unknown">결제 수단 미확인 '+money(unknown)+' · 이전 기록 확인 필요</p>':'')+'</div>'+
- '<details class="sales-performance"><summary>시술 기록 · '+performed.length+'건 <span>⌄</span></summary>'+
+ '<details class="sales-performance"><summary>완료한 시술 · '+performed.length+'건 <span>⌄</span></summary>'+
  '<div class="sales-performance-info"><div><span>시술 실적</span><b>'+money(serviceTotal)+'</b></div>'+
  '<div><span>회원권 사용액</span><b>'+money(memberSpent)+'</b></div></div></details>'+
- '<div class="section-title">고객별 수령 내역</div>'+customerHtml+
+ '<div class="section-title">고객별 수령 내역 · '+entries.length+'건</div>'+customerHtml+
  '</div></div>';
 }
 function salesPage(){
@@ -338,6 +338,47 @@ function openReceipt(kind,id,clientId){
   if(!d)return;
   alert('회원권 충전 기록은 현재 수정 기능이 없습니다. 잘못 충전한 내역은 왼쪽으로 밀어 삭제할 수 있습니다. 단, 이미 사용한 충전액은 보호됩니다.');
  }
+}
+/* Keep an expanded customer row fully in view inside the modal, not behind its footer. */
+function bindSalesPopupScroll(){
+ const area=root.querySelector('.sales-popup-scroll');
+ if(!area)return;
+ const popup=root.querySelector('.sales-popup-panel');
+ const rows=[...area.querySelectorAll('.receipt-customer')];
+ function alignExpanded(row){
+  if(!row.open||!row.isConnected)return;
+  const viewport=area.getBoundingClientRect(),rect=row.getBoundingClientRect();
+  const space=area.clientHeight-20;
+  let delta=0;
+  if(rect.height<=space){
+   if(rect.bottom>viewport.bottom-12)delta=rect.bottom-(viewport.bottom-12);
+   else if(rect.top<viewport.top+8)delta=rect.top-(viewport.top+8);
+  }else{
+   // A long receipt stays scrollable; place its title at the top first.
+   delta=rect.top-(viewport.top+8);
+  }
+  if(Math.abs(delta)>2)area.scrollTo({top:Math.max(0,area.scrollTop+delta),behavior:'smooth'});
+ }
+ rows.forEach(row=>row.addEventListener('toggle',()=>{
+  if(!row.open)return;
+  // Browser applies details layout asynchronously on iOS Safari.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>alignExpanded(row)));
+ }));
+ // When treatment performance expands, keep the section header in view too.
+ area.querySelectorAll('.sales-performance').forEach(section=>section.addEventListener('toggle',()=>{
+  if(!section.open)return;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   const rect=section.getBoundingClientRect(),view=area.getBoundingClientRect();
+   if(rect.bottom>view.bottom-12){
+    const delta=rect.height<area.clientHeight-20?rect.bottom-(view.bottom-12):rect.top-(view.top+8);
+    area.scrollTo({top:Math.max(0,area.scrollTop+delta),behavior:'smooth'});
+   }
+  }));
+ }));
+ // Preserve scroll inside the popup; avoid scrolling the underlying page.
+ if(popup)popup.addEventListener('touchmove',e=>{
+  if(!e.target.closest('.sales-popup-scroll'))e.preventDefault();
+ },{passive:false});
 }
 function bindReceiptSwipes(){
  const rows=[...root.querySelectorAll('.receipt-swipe')];
@@ -727,7 +768,7 @@ function removeClient(id){
  if(confirm('고객을 삭제할까요?')){store.clients=store.clients.filter(c=>c.id!==id);save();render();notify('고객 삭제 완료')}
 }
 function backupPage(){return `<div class="wrap">${panelHead('백업 내보내기·가져오기')}<div class="card"><b>전체 데이터 백업</b><p class="muted">고객·예약·서비스·설정을 JSON 파일로 내보냅니다.</p><button class="primary" data-export="1">전체 백업 내보내기</button></div><div class="card"><b>백업 가져오기</b><p class="note">기존 자료를 덮어쓰므로 가져오기 전에 먼저 백업해 주세요.</p><input type="file" id="importFile" accept="application/json,.json"></div><p class="note">이 앱은 현재 사용하는 기기에 로컬로 저장됩니다. 브라우저 데이터 삭제나 앱 재설치로 자료가 사라질 수 있으므로 정기적으로 백업하세요.</p></div>`}
-function bind(){bindReceiptSwipes();root.querySelectorAll('[data-tab]').forEach(e=>e.onclick=()=>{tab=e.dataset.tab;panel=null;salesPopupPeriod=null;editing=null;checkedServices=[];extras=[];render()});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel=visibleBookings(selected).length?'appointments':null;render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelectorAll('[data-treatment-gender]').forEach(el=>el.onclick=()=>{captureForm();const g=el.dataset.treatmentGender;treatmentGender=treatmentGender===g?null:g;treatmentCategory=null;render();restoreForm()});
+function bind(){bindReceiptSwipes();bindSalesPopupScroll();root.querySelectorAll('[data-tab]').forEach(e=>e.onclick=()=>{tab=e.dataset.tab;panel=null;salesPopupPeriod=null;editing=null;checkedServices=[];extras=[];render()});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel=visibleBookings(selected).length?'appointments':null;render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelectorAll('[data-treatment-gender]').forEach(el=>el.onclick=()=>{captureForm();const g=el.dataset.treatmentGender;treatmentGender=treatmentGender===g?null:g;treatmentCategory=null;render();restoreForm()});
 root.querySelectorAll('[data-treatment-category]').forEach(el=>el.onclick=()=>{captureForm();treatmentCategory=el.dataset.treatmentCategory;render();restoreForm();openTreatmentWheel()});root.querySelectorAll('[data-treatment-remove]').forEach(e=>e.onclick=()=>{captureForm();checkedServices=checkedServices.filter(id=>id!==e.dataset.treatmentRemove);recalcTreatmentEnd();render();restoreForm()});root.querySelectorAll('[data-add-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.push({name:'',amount:0});render();restoreForm()});root.querySelectorAll('[data-remove-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.splice(+e.dataset.removeExtra,1);render();restoreForm()});const payCard=root.querySelector('#payCard'),payCash=root.querySelector('#payCash');
 if(payCard&&payCash){payCard.onchange=()=>{if(payCard.checked)payCash.checked=false};payCash.onchange=()=>{if(payCash.checked)payCard.checked=false}}
 root.querySelectorAll('[data-save-booking]').forEach(e=>e.onclick=submitBooking);root.querySelectorAll('[data-delete-booking]').forEach(e=>e.onclick=()=>{if(confirm('이 예약을 삭제할까요?')){store.bookings=store.bookings.filter(b=>b.id!==e.dataset.deleteBooking);save();editing=null;tab='calendar';render();notify('예약 삭제 완료')}});root.querySelectorAll('[data-sales-open]').forEach(e=>e.onclick=()=>{salesPopupPeriod=e.dataset.salesOpen;render()});root.querySelectorAll('[data-sales-close]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;salesPopupPeriod=null;render()});root.querySelectorAll('[data-sales-move]').forEach(e=>e.onclick=()=>{const period=e.dataset.salesScope,n=+e.dataset.salesMove;if(period==='week')selected=shift(selected,n*7);else if(period==='year')cursor=new Date(cursor.getFullYear()+n,cursor.getMonth(),1);else cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);render()});root.querySelectorAll('[data-setting-gender]').forEach(e=>e.onclick=()=>{settingsGender=settingsGender===e.dataset.settingGender?null:e.dataset.settingGender;settingsCategory=null;render()});
