@@ -542,3 +542,16 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .end-pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:18px}
 .end-pay-methods button{min-height:55px;border-radius:12px;border:1px solid #d5dae4;background:#f4f5f9;font-size:17px;font-weight:700}
 .end-pay-methods button.active{border:2px solid #337dfa;background:#e7efff;color:#2879fa}
+
+/* v0.6.3 five-use eyebrow perm pack */
+.brow-pass-card{border:1px solid #e6e9f1}
+.brow-pass-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:15px 0}
+.brow-pass-counts>span{background:#f4f6fa;border-radius:12px;padding:12px 5px;text-align:center;font-size:13px;color:#7c8390}
+.brow-pass-counts b{display:block;font-size:20px;color:#242834;margin-top:5px}
+.brow-pass-blue{color:#287af4!important}.brow-pass-red{color:#df4055!important}
+.brow-pass-dots{display:flex;gap:6px;flex-wrap:wrap}
+.brow-pass-dots span{flex:0 0 34px;height:34px;border:1px solid #377df0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#eaf1ff;color:#287af4;font-weight:800}
+.brow-pass-dots span.used{border-color:#e8b4bf;color:#db4054;background:#fceef1}
+.brow-pass-history{margin-top:10px;font-size:13px}
+.brow-pass-history summary{padding:8px;cursor:pointer;font-weight:700}
+.brow-pass-history .row{padding:6px 0}
