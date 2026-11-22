@@ -521,3 +521,24 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
  .member-charge-method{min-height:44px}
  .member-charge-actions button{min-height:42px}
 }
+
+/* v0.6.2 overdue treatment confirmation, compact payment popups */
+.end-confirm-backdrop,.end-pay-backdrop{position:fixed;inset:0;z-index:240;background:rgba(0,0,0,.58);display:flex;align-items:center;justify-content:center;padding:18px}
+.end-confirm-dialog,.end-pay-dialog{background:#fff;color:#242834;border-radius:22px;width:min(100%,460px);max-height:85dvh;overflow-y:auto;padding:22px 18px;box-shadow:0 20px 60px #0004}
+.end-confirm-dialog h3{display:flex;align-items:center;gap:8px;font-size:18px;margin:0 0 17px}
+.end-confirm-warning{display:inline-flex;align-items:center;justify-content:center;background:#df4055;color:#fff;border-radius:50%;width:25px;height:25px;flex:0 0 25px;font-weight:850}
+.end-confirm-summary{background:#f4f5f9;border-radius:14px;padding:12px}
+.end-confirm-summary>div{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:7px 0;font-size:14px}
+.end-confirm-summary span{flex:0 0 auto;color:#7a7e8a}
+.end-confirm-summary strong{text-align:right;overflow-wrap:anywhere}
+.end-confirm-dialog>p{text-align:center;font-weight:750;margin:18px 0}
+.end-confirm-actions,.end-pay-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.end-confirm-actions button,.end-pay-actions button{min-height:48px;border:0;border-radius:13px;font-size:15px;font-weight:750}
+.end-confirm-later,.end-pay-cancel{background:#eef0f5;color:#4e5363}
+.end-confirm-yes,.end-pay-save{background:#347dfa;color:#fff}
+.end-pay-save:disabled{opacity:.35}
+.end-pay-dialog h3{margin:0 0 14px;font-size:18px;text-align:center}
+.end-pay-dialog p{display:flex;justify-content:space-between;margin:0 0 15px}
+.end-pay-methods{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:18px}
+.end-pay-methods button{min-height:55px;border-radius:12px;border:1px solid #d5dae4;background:#f4f5f9;font-size:17px;font-weight:700}
+.end-pay-methods button.active{border:2px solid #337dfa;background:#e7efff;color:#2879fa}
