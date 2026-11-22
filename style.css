@@ -558,3 +558,22 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 
 /* v0.6.4: cash-only five-visit special pack */
 .end-pay-methods button:disabled{opacity:.3;cursor:not-allowed}
+
+/* v0.6.5 five-pack card/cash purchase separated from treatment settlement */
+.pass-purchase-backdrop{position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.58)}
+.pass-purchase-dialog{background:#fff;border-radius:22px;width:min(100%,440px);max-height:86dvh;overflow-y:auto;color:#262934;padding:19px 17px;box-sizing:border-box}
+.pass-purchase-dialog h3{text-align:center;font-size:19px;margin:0 0 12px}
+.pass-purchase-row{display:flex;justify-content:space-between;align-items:center;gap:9px;padding:7px 0;font-size:14px}
+.pass-purchase-row span{color:#747b8a}
+.pass-purchase-total{font-size:19px;color:#2b7af3}
+.pass-purchase-label{font-size:14px;font-weight:750;margin:12px 0 8px}
+.pass-purchase-methods{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:8px 0 13px}
+.pass-purchase-methods button{background:#f3f5f8;border:1.5px solid #d1d7e1;border-radius:12px;min-height:52px;font-weight:750;font-size:17px;color:#283344}
+.pass-purchase-methods button.active{background:#e5efff;border-color:#2e7af6;color:#2476ec}
+.pass-purchase-normal{border-radius:12px;background:#f5f6fa;padding:7px 12px;margin:12px 0}
+.pass-purchase-note{font-size:13px;color:#956319;margin:8px 0}
+.pass-purchase-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:15px}
+.pass-purchase-actions button{border:0;min-height:48px;border-radius:12px;font-weight:750}
+.pass-purchase-cancel{background:#eef0f4;color:#454b59}
+.pass-purchase-confirm{background:#327df5;color:white}
+.pass-purchase-confirm:disabled{opacity:.4}
