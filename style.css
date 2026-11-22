@@ -608,3 +608,63 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 /* v0.7.0: status-adjacent early completion button and version check */
 .app-version-label{font-size:12px;color:#9299a7;font-weight:600;vertical-align:middle;margin-left:6px}
 .early-complete-button{margin:8px 0 20px;min-height:50px}
+
+/* v0.7.2: spacious weekly/day appointment grid, scrollable in both axes.
+   Keep hour gutter fixed as weekdays pan horizontally. */
+.calendar-root .calendar-grid-wrap.week-schedule,
+.calendar-root .calendar-grid-wrap.day-schedule{
+ height:min(59dvh,610px);
+ overflow-x:auto;
+ overflow-y:auto;
+ -webkit-overflow-scrolling:touch;
+ overscroll-behavior:contain;
+ position:relative;
+}
+.calendar-root .calendar-grid-wrap .hour-labels{
+ width:38px;flex:0 0 38px;
+ position:sticky;left:0;z-index:3;
+ background:#09090b;
+}
+.calendar-root .calendar-grid-wrap .hour-lab{
+ box-sizing:border-box;height:var(--schedule-unit);
+ font-size:13px;padding-top:6px;
+}
+.calendar-root .calendar-grid-wrap .schedule-area{
+ background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--schedule-unit) - 1px),#363840 calc(var(--schedule-unit) - 1px),#363840 var(--schedule-unit));
+}
+.calendar-root .calendar-grid-wrap.week-schedule .schedule-area{
+ flex:0 0 1330px;width:1330px;min-width:1330px;
+}
+.calendar-root .calendar-grid-wrap.week-schedule .week-columns{
+ grid-template-columns:repeat(7,minmax(190px,1fr));
+}
+.calendar-root .week-days-viewport{
+ overflow-x:auto;overflow-y:hidden;
+ scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.calendar-root .week-days-viewport::-webkit-scrollbar{display:none}
+.calendar-root .week-days-viewport .week-days{
+ box-sizing:border-box;display:grid;
+ grid-template-columns:repeat(7,minmax(190px,1fr));
+ width:1368px;min-width:1368px;
+ padding-left:38px;margin:0;
+}
+.calendar-root .calendar-grid-wrap.day-schedule .schedule-area{
+ flex:1 0 calc(100% - 38px);width:calc(100% - 38px);
+}
+.calendar-root .week-columns.single-day{grid-template-columns:minmax(0,1fr)}
+.calendar-root .calendar-grid-wrap .event{
+ box-sizing:border-box;display:flex;flex-direction:column;
+ align-items:flex-start;justify-content:flex-start;
+ gap:3px;white-space:normal;
+ overflow:visible;overflow-wrap:anywhere;
+ text-align:left;line-height:1.28;
+ padding:9px 10px;border-radius:9px;
+ font-size:13px;min-width:0;
+}
+.calendar-root .calendar-grid-wrap .event .event-time{font-size:14px;font-weight:800}
+.calendar-root .calendar-grid-wrap .event .event-client{font-size:13px;font-weight:750}
+.calendar-root .calendar-grid-wrap .event .event-service{font-size:12px}
+.calendar-root .calendar-grid-wrap .event .event-state{font-size:11px;opacity:.9}
+.calendar-root .calendar-grid-wrap .week-event{left:5px;right:5px}
+.calendar-root .calendar-grid-wrap .day-event{left:9px;right:9px}
