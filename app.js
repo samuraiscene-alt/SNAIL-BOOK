@@ -28,7 +28,7 @@ function searchResults(){const s=search.trim();if(!s)return '<div class="sub">�
 /* Membership deposits are stored per customer; only paid booking use reduces credit. */
 function walletLedger(client){
  const deposits=Array.isArray(client.walletDeposits)?client.walletDeposits:[];
- const received=deposits.reduce((sum,x)=>sum+Math.max(0,Number(x.amount)||0),0);
+ const received=deposits.reduce((sum,x)=>sum+Math.max(0,Number(x.creditedAmount??x.amount)||0),0);
  const uses=store.bookings.filter(b=>b.clientId===client.id&&b.status==='paid'&&Number(b.memberUse)>0);
  const spent=uses.reduce((sum,b)=>sum+Number(b.memberUse||0),0);
  return {deposits,received,uses,spent,balance:received-spent};
@@ -98,7 +98,7 @@ function memberCard(client,booked){
  const own=booked&&booked.clientId===client.id&&booked.status==='paid'?Number(booked.memberUse||0):0;
  const available=Math.max(0,w.balance+own);
  const percent=Math.max(0,Math.min(100,Math.round(100*w.balance/w.received)));
- const deposits=w.deposits.map(x=>({date:x.date||'',name:'회원권 충전',amount:Number(x.amount||0)}));
+ const deposits=w.deposits.map(x=>({date:x.date||'',name:'회원권 충전',amount:Number(x.creditedAmount??x.amount??0)}));
  const usage=w.uses.map(x=>({date:x.date||'',name:serviceNames(x),amount:-Number(x.memberUse||0)}));
  const recent=[...deposits,...usage].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,3);
  const selected=booked&&booked.clientId===client.id?Number(booked.memberUse||0):0;
@@ -107,52 +107,30 @@ function memberCard(client,booked){
  '<div class="member-balance"><div class="muted">현재 회원권 잔액</div><div class="member-total">'+money(w.balance)+'</div>'+
  '<div class="member-track"><div class="member-bar" style="width:'+percent+'%"></div></div>'+
  '<div class="row member-sums"><span>사용 '+money(w.spent)+'</span><span>충전 '+money(w.received)+'</span></div></div>'+
- '<label class="wallet-auto-row"><input type="checkbox" id="walletPay" '+(booked&&booked.status==='paid'&&selected===0?'':'checked')+'><span>회원권으로 결제 (자동 차감)</span></label>'+ 
- '<div class="member-usage"><label for="memberUse">이번 시술 회원권 사용</label><input id="memberUse" inputmode="numeric" type="number" min="0" max="'+available+'" step="1000" value="'+selected+'"></div>'+
- '<p class="note">완료로 저장할 때만 차감 · 사용 가능 '+money(available)+'</p>'+
+ '<p class="note">시술 완료 시 회원권 잔액에서 자동 차감합니다.</p>'+ 
  '<div class="member-history"><b>최근 이용 내역</b>'+entries+'</div></div>';
 }
 function refreshMemberCard(){
  const host=root.querySelector('#membershipMount');if(!host)return;
- const current=bookingClient();
- const previous=host.dataset.clientId;
- const oldValue=host.querySelector('#memberUse')?.value;
- const booking=editing?store.bookings.find(x=>x.id===editing):null;
- host.innerHTML=current?memberCard(current,booking):'';
- host.dataset.clientId=current?.id||'';
- const input=host.querySelector('#memberUse');
- if(input){
-   if(previous===current.id&&oldValue!==undefined)input.value=oldValue;
-   bindWalletAutoPayment();
-   input.addEventListener('change',()=>{
-     const credit=walletLedger(current);
-     const available=Math.max(0,credit.balance+(booking?.status==='paid'&&booking.clientId===current.id?Number(booking.memberUse||0):0));
-     let amount=Number(input.value)||0;
-     if(!Number.isFinite(amount)||amount<0)amount=0;
-     input.value=Math.min(available,amount);
-   });
+ const current=bookingClient(),booking=editing?store.bookings.find(x=>x.id===editing):null;
+ const id=current?.id||'';
+ if(host.dataset.clientId!==id){
+  host.innerHTML=current?memberCard(current,booking):'';
+  host.dataset.clientId=id;
  }
+ updateBookingPayControls();
 }
-
-
+function updateBookingPayControls(){
+ const block=root.querySelector('.payment-method-block');if(!block)return;
+ const current=bookingClient();
+ const hasMembership=current&&walletLedger(current).received>0;
+ block.hidden=!!hasMembership;
+ const note=block.querySelector('.payment-note');
+ if(note&&!hasMembership)note.textContent='회원권이 없는 고객은 결제 수단을 선택하세요.';
+}
 function bookingAmountNow(){
  return Math.max(0,checkedServices.reduce((n,id)=>n+Number(store.services.find(s=>s.id===id)?.price||0),0)+
  [...root.querySelectorAll('[data-extra-amount]')].reduce((n,e)=>n+Number(e.value||0),0));
-}
-function bindWalletAutoPayment(){
- const status=root.querySelector('#status'),check=root.querySelector('#walletPay'),amount=root.querySelector('#memberUse');
- if(!status||!check||!amount)return;
- const old=editing?store.bookings.find(b=>b.id===editing):null;
- function update(auto){
-  const client=bookingClient();if(!client)return;
-  const available=Math.max(0,walletLedger(client).balance+(old?.status==='paid'&&old.clientId===client.id?Number(old.memberUse||0):0));
-  amount.disabled=!check.checked;
-  if(!check.checked){amount.value='0';return}
-  if(status.value==='paid'&&(auto||Number(amount.value)===0))amount.value=String(Math.min(available,bookingAmountNow()));
- }
- status.addEventListener('change',()=>update(true));
- check.addEventListener('change',()=>update(true));
- update(false);
 }
 
 const TREATMENT_CATEGORIES=['네일','페디','얼굴왁싱','바디왁싱'];
@@ -330,7 +308,7 @@ function deleteReceipt(kind,id,clientId){
   const deposits=client?.walletDeposits;
   const record=deposits?.find(d=>String(d.id)===String(id));
   if(!record)return;
-  const amount=Number(record.amount)||0;
+  const amount=Number(record.creditedAmount??record.amount)||0;
   const ledger=walletLedger(client);
   if(ledger.balance-amount<0){alert('이 충전액은 이미 회원권 시술에 사용되어 삭제할 수 없습니다. 사용 내역부터 확인해 주세요.');return}
   if(!confirm(client.name+'님의 회원권 충전 '+money(amount)+'을 삭제할까요?\n충전 기록과 수령액이 삭제되며 회원권 잔액도 줄어듭니다.'))return;
@@ -794,16 +772,112 @@ let tempForm=null;function captureForm(){if(tab!=='booking')return;tempForm={};[
 function restoreForm(){if(!tempForm)return;Object.entries(tempForm).forEach(([k,v])=>{let e=root.querySelector('#'+k);if(e){if(e.type==='checkbox')e.checked=!!v;else e.value=v}});tempForm=null}
 function val(id){return root.querySelector('#'+id)?.value||''}function readServices(){store.services.forEach(s=>{s.name=root.querySelector(`[data-s-name="${s.id}"]`)?.value?.trim()||s.name})}
 function addClient(){const name=val('clientName').trim(),phone=val('clientPhone').trim(),note=val('clientNote').trim();if(!name||!phone){alert('고객 이름과 연락처를 입력하세요.');return}if(store.clients.some(c=>c.name===name&&c.phone===phone)){alert('이미 등록된 고객입니다.');return}store.clients.push({id:uid(),name,phone,note});save();render();notify('고객 등록 완료')}
-function submitBooking(){captureForm();const f=tempForm;const name=f.name?.trim(),phone=f.phone?.trim();if(!name||!phone){alert('고객 이름과 연락처를 입력하세요.');return}if(!f.date||!f.start||!f.end||mins(f.end)<=mins(f.start)){alert('시술일과 시작·종료 시간을 확인하세요.');return}if(!checkedServices.length){alert('시술을 1개 이상 선택하세요.');return}let clients=store.clients.filter(c=>c.name===name&&c.phone===phone);let client=clients[0];if(!client){client={id:uid(),name,phone,note:''};store.clients.push(client)}let list=store.bookings.filter(b=>b.id!==editing&&b.date===f.date&&b.status!=='cancelled'&&mins(f.start)<mins(b.end)&&mins(f.end)>mins(b.start));if(list.length&&!confirm(`이미 ${list.length}건의 예약과 시간이 겹칩니다. 그래도 저장할까요?`))return;const day=dateOf(f.date).getDay();if(store.settings.closedDays.includes(day)&&!confirm('설정된 정기 휴무일입니다. 그래도 예약할까요?'))return;if((mins(f.start)<mins(store.settings.open)||mins(f.end)>mins(store.settings.close))&&!confirm('영업시간 밖의 예약입니다. 그래도 저장할까요?'))return;const old=store.bookings.find(b=>b.id===editing);
-const available=walletLedger(client).balance+(old?.status==='paid'&&old.clientId===client.id?Number(old.memberUse||0):0);
-const totalDue=Math.max(0,checkedServices.reduce((n,id)=>n+Number(store.services.find(s=>s.id===id)?.price||0),0)+extras.reduce((n,x)=>n+Number(x.amount||0),0));
-const useWallet=!!root.querySelector('#walletPay')?.checked;
-let memberUse=f.status==='paid'&&useWallet?Number(f.memberUse||0):0;
-if(!Number.isSafeInteger(memberUse)||memberUse<0){alert('회원권 사용 금액을 확인해 주세요.');return}
-if(f.status==='paid'&&useWallet&&memberUse===0)memberUse=Math.min(available,totalDue);
-if(memberUse>available||memberUse>totalDue){alert('회원권 잔액 또는 시술 금액보다 많이 사용할 수 없습니다.');return}
-const paymentMethod=root.querySelector('#payCard')?.checked?'card':root.querySelector('#payCash')?.checked?'cash':null;
-if(f.status==='paid'&&totalDue>memberUse&&!paymentMethod){alert('남은 결제 금액의 카드 또는 현금을 선택해 주세요.');return}
-const b={id:editing||uid(),paymentMethod,paymentDate:f.status==='paid'?(old?.status==='paid'?old.paymentDate||old.date:f.date):null,clientId:client.id,name,phone,date:f.date,start:f.start,end:f.end,items:checkedServices.map(id=>store.services.find(s=>s.id===id)).filter(Boolean).map(s=>clone(s)),extras:clone(extras),memberUse,status:f.status||'reserved',memo:f.memo||'',createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(editing)store.bookings=store.bookings.map(x=>x.id===editing?b:x);else store.bookings.push(b);save();selected=f.date;cursor=dateOf(selected);tab='calendar';panel=null;editing=null;checkedServices=[];extras=[];tempForm=null;render();notify('예약 저장 완료')}
+
+const MEMBERSHIP_PLANS={
+ 200000:{cash:220000,card:205000},
+ 300000:{cash:340000,card:320000},
+ 500000:{cash:570000,card:550000}
+};
+function memberPaymentPrompt(context){
+ const {available,totalDue}=context;
+ const shortfall=totalDue-available;
+ const back=document.createElement('div');
+ back.className='member-shortage-backdrop';
+ back.innerHTML='<section class="member-shortage-panel" role="dialog" aria-modal="true" aria-label="회원권 잔액 부족">'+
+ '<h3><span class="shortage-warning" aria-hidden="true">!</span> 회원권 잔액이 부족합니다.</h3>'+
+ '<div class="shortage-figures"><div><span>시술 금액</span><strong>'+money(totalDue)+'</strong></div>'+
+ '<div><span>현재 회원권 잔액</span><strong>'+money(available)+'</strong></div>'+
+ '<div><span>부족 금액</span><strong class="shortage-red">'+money(shortfall)+'</strong></div></div>'+
+ '<div class="shortage-modes"><label><input type="radio" name="shortageMode" value="recharge" checked> 회원권 추가 충전</label>'+
+ '<label><input type="radio" name="shortageMode" value="remainder"> 부족액 현금·카드 결제</label></div>'+
+ '<div class="shortage-plans"><strong>회원권 상품</strong>'+
+ '<div class="shortage-plan-options">'+[200000,300000,500000].map(n=>'<label><input type="radio" name="shortagePlan" value="'+n+'" '+(n===200000?'checked':'')+'><span>'+money(n)+'권</span></label>').join('')+'</div></div>'+
+ '<div class="shortage-methods"><strong>결제 수단 선택</strong><div class="shortage-method-options">'+
+ '<label><input type="radio" name="shortageMethod" value="cash"><span>현금</span></label>'+
+ '<label><input type="radio" name="shortageMethod" value="card"><span>카드</span></label></div></div>'+
+ '<div class="shortage-preview" aria-live="polite"></div>'+
+ '<div class="shortage-actions"><button type="button" class="shortage-cancel">취소</button><button type="button" class="shortage-confirm" disabled>확정·시술 저장</button></div></section>';
+ document.body.appendChild(back);
+ const previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
+ const close=()=>{document.body.style.overflow=previousOverflow;back.remove()};
+ const current=(name)=>back.querySelector('input[name="'+name+'"]:checked')?.value;
+ const update=()=>{
+  const mode=current('shortageMode'),method=current('shortageMethod'),cost=Number(current('shortagePlan')||200000);
+  back.querySelector('.shortage-plans').hidden=mode!=='recharge';
+  const preview=back.querySelector('.shortage-preview');
+  if(mode==='recharge'){
+   const credited=method?MEMBERSHIP_PLANS[cost][method]:null;
+   preview.innerHTML='<div><span>실제 결제액</span><b>'+money(cost)+'</b></div>'+
+    '<div><span>서비스 추가 금액</span><b class="shortage-blue">'+(credited===null?'결제 수단 선택':'+ '+money(credited-cost))+'</b></div>'+
+    '<div><span>충전 후 사용 가능 금액</span><b>'+(credited===null?'—':money(credited+available))+'</b></div>'+
+    '<div><span>시술비 차감 후 잔액</span><b class="shortage-blue">'+(credited===null?'—':money(credited+available-totalDue))+'</b></div>';
+  }else{
+   preview.innerHTML='<div><span>회원권 자동 차감</span><b class="shortage-red">−'+money(available)+'</b></div>'+
+   '<div><span>추가 결제액</span><b>'+money(shortfall)+'</b></div>';
+  }
+  back.querySelector('.shortage-confirm').disabled=!method;
+ };
+ back.querySelectorAll('input[type="radio"]').forEach(el=>el.addEventListener('change',update));
+ back.querySelector('.shortage-cancel').onclick=close;
+ back.addEventListener('click',e=>{if(e.target===back)close()});
+ back.querySelector('.shortage-confirm').onclick=()=>{
+  const mode=current('shortageMode'),method=current('shortageMethod');
+  if(method!=='cash'&&method!=='card')return;
+  const face=Number(current('shortagePlan')||200000);
+  const credited=mode==='recharge'?MEMBERSHIP_PLANS[face][method]:0;
+  const deposit=mode==='recharge'?{id:uid(),amount:face,creditedAmount:credited,bonusAmount:credited-face,paymentMethod:method,planAmount:face,date:localDate(new Date()),createdAt:new Date().toISOString()}:null;
+  close();
+  commitCompletedBooking(context,deposit,mode==='remainder'?method:null);
+ };
+ update();
+}
+function commitCompletedBooking(ctx,deposit,paymentMethod){
+ const {f,name,phone,old,client,totalDue,available}=ctx;
+ // All mutation occurs together after confirmation; no partial member charge is saved.
+ const credit=deposit?Number(deposit.creditedAmount):0;
+ const memberUse=f.status==='paid'?Math.min(totalDue,Math.max(0,available+credit)):0;
+ const remaining=f.status==='paid'?Math.max(0,totalDue-memberUse):0;
+ const selectedMethod=paymentMethod||null;
+ if(f.status==='paid'&&remaining>0&&!selectedMethod){alert('남은 결제 금액의 결제 수단을 선택해 주세요.');return}
+ if(deposit){
+  if(!Array.isArray(client.walletDeposits))client.walletDeposits=[];
+  client.walletDeposits.push(deposit);
+ }
+ if(!store.clients.some(c=>c.id===client.id))store.clients.push(client);
+ const b={id:editing||uid(),paymentMethod:selectedMethod,paymentDate:f.status==='paid'?(old?.status==='paid'?old.paymentDate||old.date:f.date):null,
+  clientId:client.id,name,phone,date:f.date,start:f.start,end:f.end,
+  items:checkedServices.map(id=>store.services.find(s=>s.id===id)).filter(Boolean).map(s=>clone(s)),
+  extras:clone(extras),memberUse,status:f.status||'reserved',memo:f.memo||'',
+  createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+ if(editing)store.bookings=store.bookings.map(x=>x.id===editing?b:x);else store.bookings.push(b);
+ save();selected=f.date;cursor=dateOf(selected);tab='calendar';panel=null;editing=null;checkedServices=[];extras=[];tempForm=null;render();notify('예약 저장 완료');
+}
+function submitBooking(){
+ captureForm();const f=tempForm;
+ const name=f.name?.trim(),phone=f.phone?.trim();
+ if(!name||!phone){alert('고객 이름과 연락처를 입력하세요.');return}
+ if(!f.date||!f.start||!f.end||mins(f.end)<=mins(f.start)){alert('시술일과 시작·종료 시간을 확인하세요.');return}
+ if(!checkedServices.length){alert('시술을 1개 이상 선택하세요.');return}
+ const existing=store.clients.find(c=>c.name===name&&c.phone===phone);
+ const client=existing||{id:uid(),name,phone,note:''};
+ const collisions=store.bookings.filter(b=>b.id!==editing&&b.date===f.date&&b.status!=='cancelled'&&mins(f.start)<mins(b.end)&&mins(f.end)>mins(b.start));
+ if(collisions.length&&!confirm('이미 '+collisions.length+'건의 예약과 시간이 겹칩니다. 그래도 저장할까요?'))return;
+ const day=dateOf(f.date).getDay();
+ if(store.settings.closedDays.includes(day)&&!confirm('설정된 정기 휴무일입니다. 그래도 예약할까요?'))return;
+ if((mins(f.start)<mins(store.settings.open)||mins(f.end)>mins(store.settings.close))&&!confirm('영업시간 밖의 예약입니다. 그래도 저장할까요?'))return;
+ const old=store.bookings.find(b=>b.id===editing);
+ const available=Math.max(0,walletLedger(client).balance+(old?.status==='paid'&&old.clientId===client.id?Number(old.memberUse||0):0));
+ const totalDue=bookingAmountNow();
+ const ctx={f,name,phone,old,client,available,totalDue};
+ const currentMethod=root.querySelector('#payCard')?.checked?'card':root.querySelector('#payCash')?.checked?'cash':null;
+ if(f.status!=='paid'){commitCompletedBooking(ctx,null,null);return}
+ if(walletLedger(client).received>0){
+  if(available<totalDue){memberPaymentPrompt(ctx);return}
+  commitCompletedBooking(ctx,null,null);return;
+ }
+ if(totalDue>0&&!currentMethod){alert('현금 또는 카드 결제 방법을 선택해 주세요.');return}
+ commitCompletedBooking(ctx,null,currentMethod);
+}
+
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));render();
 })();
