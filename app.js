@@ -128,12 +128,23 @@ function memberCard(client,booked){
  '<p class="note">시술 완료 시 회원권 잔액에서 자동 차감합니다.</p>'+ 
  '<div class="member-history"><b>최근 이용 내역</b>'+entries+'</div></div>';
 }
+function browPassCard(client){
+ const pass=browPassLedger(client);
+ if(pass.bought<=0)return '';
+ const history=pass.history.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+ return '<div class="card brow-pass-card"><div class="row"><b>눈썹펌 5회권</b><span class="member-chip">'+(pass.balance?'이용 중':'모두 사용')+'</span></div>'+
+ '<div class="brow-pass-counts"><span>구매 <b>'+pass.bought+'회</b></span><span>사용 <b class="brow-pass-red">'+pass.used+'회</b></span><span>잔여 <b class="brow-pass-blue">'+pass.balance+'회</b></span></div>'+
+ '<div class="brow-pass-dots">'+Array.from({length:Math.min(pass.bought,15)},(_,i)=>'<span class="'+(i<pass.used?'used':'unused')+'">'+(i<pass.used?'✓':i+1)+'</span>').join('')+'</div>'+
+ '<p class="note">예약만 등록하면 차감되지 않습니다. 시술 완료 시 1회 자동 차감합니다.</p>'+
+ '<details class="brow-pass-history"><summary>사용·구매 기록 확인 ▾</summary>'+
+ history.map(b=>'<div class="row"><span>'+esc(b.date)+' · '+(specialKind(b.items)==='buy'?'5회권 구매':'눈썹펌 사용')+'</span><b class="'+(specialKind(b.items)==='buy'?'brow-pass-blue':'brow-pass-red')+'">'+(specialKind(b.items)==='buy'?'+5':'−1')+'회</b></div>').join('')+'</details></div>';
+}
 function refreshMemberCard(){
  const host=root.querySelector('#membershipMount');if(!host)return;
  const current=bookingClient(),booking=editing?store.bookings.find(x=>x.id===editing):null;
  const id=current?.id||'';
  if(host.dataset.clientId!==id){
-  host.innerHTML=current?memberCard(current,booking):'';
+  host.innerHTML=current?memberCard(current,booking)+browPassCard(current):'';
   host.dataset.clientId=id;
  }
  updateBookingPayControls();
@@ -142,16 +153,40 @@ function updateBookingPayControls(){
  const block=root.querySelector('.payment-method-block');if(!block)return;
  const current=bookingClient();
  const hasMembership=current&&walletLedger(current).received>0;
- block.hidden=!!hasMembership;
+ block.hidden=!!hasMembership&&!checkedServices.includes(BROW_PASS_BUY);
  const note=block.querySelector('.payment-note');
- if(note&&!hasMembership)note.textContent='회원권이 없는 고객은 결제 수단을 선택하세요.';
+ if(note&&checkedServices.includes(BROW_PASS_BUY))note.textContent='5회권 구매는 현금가 190,000원으로 등록됩니다. 현금을 선택하세요.';
+ else if(note&&!hasMembership)note.textContent='회원권이 없는 고객은 결제 수단을 선택하세요.';
 }
 function bookingAmountNow(){
  return Math.max(0,checkedServices.reduce((n,id)=>n+Number(store.services.find(s=>s.id===id)?.price||0),0)+
  [...root.querySelectorAll('[data-extra-amount]')].reduce((n,e)=>n+Number(e.value||0),0));
 }
 
-const TREATMENT_CATEGORIES=['네일','페디','얼굴왁싱','바디왁싱'];
+const TREATMENT_CATEGORIES=['네일','페디','얼굴왁싱','바디왁싱','특별 케어'];
+const BROW_PASS_BUY='snail-browpass-buy',BROW_PASS_USE='snail-browpass-use';
+function specialKind(items){const ids=(items||[]).map(i=>i.id);return ids.includes(BROW_PASS_BUY)?'buy':ids.includes(BROW_PASS_USE)?'use':null}
+function browPassLedger(client){
+ const records=store.bookings.filter(b=>b.clientId===client.id&&b.status==='paid');
+ const bought=records.filter(b=>specialKind(b.items)==='buy').length*5;
+ const used=records.filter(b=>specialKind(b.items)==='use').length;
+ return {bought,used,balance:Math.max(0,bought-used),history:records.filter(b=>specialKind(b.items))};
+}
+function ensureSpecialCatalog(){
+ if(store.catalogSeedVersion>=3)return;
+ const male=store.services.find(s=>s.id==='menu-m-nail-care');
+ if(male&&male.name==='케어')male.name='맨즈 케어';
+ for(const gender of ['W','M']){
+  if(!store.services.some(s=>s.gender===gender&&s.category==='네일'&&s.name==='풀글리터'))
+   store.services.push({id:'menu-'+gender.toLowerCase()+'-nail-glitter',name:'풀글리터',gender,category:'네일',price:55000,minutes:60});
+ }
+ for(const item of [{id:BROW_PASS_BUY,name:'눈썹펌 5회권 구매',price:190000,minutes:0},
+                    {id:BROW_PASS_USE,name:'눈썹펌 5회권 사용',price:0,minutes:60}]){
+  if(!store.services.some(s=>s.id===item.id))store.services.push({...item,gender:'W',category:'특별 케어'});
+ }
+ store.catalogSeedVersion=3;save();
+}
+
 function serviceGender(s){return s.gender==='M'?'M':'W'}
 function serviceCategory(s){
  if(TREATMENT_CATEGORIES.includes(s.category))return s.category;
@@ -213,6 +248,7 @@ function seedStructuredServices(){
  save();
 }
 seedStructuredServices();
+ensureSpecialCatalog();
 repairFutureCompletedBookings();
 function chooseTreatmentGroup(gender,category){
  captureForm();
@@ -220,7 +256,7 @@ function chooseTreatmentGroup(gender,category){
  else{treatmentGender=gender;treatmentCategory=category}
  render();restoreForm();
 }
-function bookingPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자가 설치한 기기에서 연동할 예정입니다. 현재 버전은 캘린더 연동 기능을 실행하지 않습니다.');const b=editing?store.bookings.find(x=>x.id===editing):null;let client=b?findClient(b.clientId):null;let local=editing?b:null;let selections=checkedServices.map(id=>store.services.find(x=>x.id===id)).filter(Boolean),total=selections.reduce((a,s)=>a+Number(s.price),0)+extras.reduce((a,e)=>a+Number(e.amount),0);return `<div class="wrap"><h2 class="form-title">${b?'시술 예약 수정':'시술 예약 등록'}</h2><div class="card"><div class="field"><label>고객 이름</label><div class="client-autocomplete"><input id="name" autocomplete="off" placeholder="고객 이름 또는 초성 입력" value="${esc(client?.name||local?.name||'')}"><div id="clientSuggestions" class="client-suggestions" hidden></div></div></div><div class="field"><label>연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" value="${esc(client?.phone||local?.phone||'')}"></div><div class="field"><label>시술일</label><input id="date" type="date" value="${esc(local?.date||selected)}"></div><div class="field"><label>시술시간</label><input id="start" type="time" value="${esc(local?.start||store.settings.open)}"></div><div class="field"><label>종료시간</label><input id="end" type="time" value="${esc(local?.end||hour(mins(store.settings.open)+60))}"></div></div><div id="membershipMount"></div><div class="card"><div class="row"><b>시술 내역</b><span class="muted">복수 선택 가능</span></div><div class="treatment-catalog"><div class="treatment-genders">${[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>`<button type="button" class="treatment-gender ${treatmentGender===g?'active':''}" data-treatment-gender="${g}">${label}<span>${treatmentGender===g?'⌃':'⌄'}</span></button>`).join('')}</div>${treatmentGender?`<div class="treatment-category-list">${TREATMENT_CATEGORIES.map(cat=>`<button type="button" class="treatment-category ${treatmentCategory===cat?'active':''}" data-treatment-category="${cat}"><span>${cat}</span><span>›</span></button>`).join('')}</div>`:''}</div><div class="selected-treatments">${selections.map(s=>`<div class="selected-treatment"><span>${esc(s.name)}</span><button type="button" data-treatment-remove="${s.id}" aria-label="선택 해제">×</button></div>`).join('')||'<div class="muted">선택된 시술이 없습니다.</div>'}</div><div class="row" style="margin-top:13px"><span class="muted">선택 시술 예상 시간</span><b>${selections.reduce((a,s)=>a+Number(s.minutes),0)}분</b></div></div><div class="card"><div class="row"><b>그 외 추가 비용·할인</b><button class="secondary" data-add-extra="1">+ 항목 추가</button></div>${extras.map((e,i)=>`<div class="field"><input aria-label="추가 항목 이름" data-extra-name="${i}" placeholder="추가 아트·할인" value="${esc(e.name)}"><input aria-label="추가 금액" data-extra-amount="${i}" type="number" placeholder="할인 시 음수" value="${e.amount}"><button class="danger" data-remove-extra="${i}">×</button></div>`).join('')}<div class="row" style="margin-top:15px"><b>예상 결제 금액</b><b style="font-size:22px;color:#087aff">${money(total)}</b></div></div><div class="card"><div class="field"><label>진행 상태</label><select id="status"><option value="reserved" ${!local||local.status==='reserved'?'selected':''}>예약</option><option value="paid" ${local?.status==='paid'?'selected':''}>완료</option>${local?.status==='done'?'<option value="done" selected>기존 시술 완료 · 정산 전</option>':''}<option value="cancelled" ${local?.status==='cancelled'?'selected':''}>예약 취소</option><option value="noshow" ${local?.status==='noshow'?'selected':''}>노쇼</option></select></div><div class="payment-method-block"><b>결제 방법</b><div class="payment-switch-row"><label class="payment-switch-option"><span>카드</span><input type="checkbox" id="payCard" ${local?.paymentMethod==='card'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label><label class="payment-switch-option"><span>현금</span><input type="checkbox" id="payCash" ${local?.paymentMethod==='cash'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label></div><p class="payment-note">처음에는 둘 다 꺼져 있습니다. 완료 시 결제 방법을 선택하세요.</p></div><div class="field"><label>고객 메모</label><textarea id="memo" placeholder="시술 및 고객 특이사항">${esc(local?.memo||'')}</textarea></div></div><button class="primary" data-save-booking="1">${b?'수정 내용 저장':'시술 금액 계산·예약 저장'}</button>${b?`<button class="danger" style="width:100%" data-delete-booking="${b.id}">예약 삭제</button><button class="ghost" style="width:100%;margin-top:10px" data-new="1">새 예약 등록</button>`:''}<p class="note">예약 시점에는 매출과 회원권 사용액에 반영되지 않습니다. 시술 종료 시간이 지난 후 ‘완료’로 저장하면 정산됩니다.</p></div>`}
+function bookingPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자가 설치한 기기에서 연동할 예정입니다. 현재 버전은 캘린더 연동 기능을 실행하지 않습니다.');const b=editing?store.bookings.find(x=>x.id===editing):null;let client=b?findClient(b.clientId):null;let local=editing?b:null;let selections=checkedServices.map(id=>store.services.find(x=>x.id===id)).filter(Boolean),total=selections.reduce((a,s)=>a+Number(s.price),0)+extras.reduce((a,e)=>a+Number(e.amount),0);return `<div class="wrap"><h2 class="form-title">${b?'시술 예약 수정':'시술 예약 등록'}</h2><div class="card"><div class="field"><label>고객 이름</label><div class="client-autocomplete"><input id="name" autocomplete="off" placeholder="고객 이름 또는 초성 입력" value="${esc(client?.name||local?.name||'')}"><div id="clientSuggestions" class="client-suggestions" hidden></div></div></div><div class="field"><label>연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" value="${esc(client?.phone||local?.phone||'')}"></div><div class="field"><label>시술일</label><input id="date" type="date" value="${esc(local?.date||selected)}"></div><div class="field"><label>시술시간</label><input id="start" type="time" value="${esc(local?.start||store.settings.open)}"></div><div class="field"><label>종료시간</label><input id="end" type="time" value="${esc(local?.end||hour(mins(store.settings.open)+60))}"></div></div><div id="membershipMount"></div><div class="card"><div class="row"><b>시술 내역</b><span class="muted">복수 선택 가능</span></div><div class="treatment-catalog"><div class="treatment-genders">${[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>`<button type="button" class="treatment-gender ${treatmentGender===g?'active':''}" data-treatment-gender="${g}">${label}<span>${treatmentGender===g?'⌃':'⌄'}</span></button>`).join('')}</div>${treatmentGender?`<div class="treatment-category-list">${TREATMENT_CATEGORIES.filter(cat=>treatmentGender==='W'||cat!=='특별 케어').map(cat=>`<button type="button" class="treatment-category ${treatmentCategory===cat?'active':''}" data-treatment-category="${cat}"><span>${cat}</span><span>›</span></button>`).join('')}</div>`:''}</div><div class="selected-treatments">${selections.map(s=>`<div class="selected-treatment"><span>${esc(s.name)}</span><button type="button" data-treatment-remove="${s.id}" aria-label="선택 해제">×</button></div>`).join('')||'<div class="muted">선택된 시술이 없습니다.</div>'}</div><div class="row" style="margin-top:13px"><span class="muted">선택 시술 예상 시간</span><b>${selections.reduce((a,s)=>a+Number(s.minutes),0)}분</b></div></div><div class="card"><div class="row"><b>그 외 추가 비용·할인</b><button class="secondary" data-add-extra="1">+ 항목 추가</button></div>${extras.map((e,i)=>`<div class="field"><input aria-label="추가 항목 이름" data-extra-name="${i}" placeholder="추가 아트·할인" value="${esc(e.name)}"><input aria-label="추가 금액" data-extra-amount="${i}" type="number" placeholder="할인 시 음수" value="${e.amount}"><button class="danger" data-remove-extra="${i}">×</button></div>`).join('')}<div class="row" style="margin-top:15px"><b>예상 결제 금액</b><b style="font-size:22px;color:#087aff">${money(total)}</b></div></div><div class="card"><div class="field"><label>진행 상태</label><select id="status"><option value="reserved" ${!local||local.status==='reserved'?'selected':''}>예약</option><option value="paid" ${local?.status==='paid'?'selected':''}>완료</option>${local?.status==='done'?'<option value="done" selected>기존 시술 완료 · 정산 전</option>':''}<option value="cancelled" ${local?.status==='cancelled'?'selected':''}>예약 취소</option><option value="noshow" ${local?.status==='noshow'?'selected':''}>노쇼</option></select></div><div class="payment-method-block"><b>결제 방법</b><div class="payment-switch-row"><label class="payment-switch-option"><span>카드</span><input type="checkbox" id="payCard" ${local?.paymentMethod==='card'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label><label class="payment-switch-option"><span>현금</span><input type="checkbox" id="payCash" ${local?.paymentMethod==='cash'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label></div><p class="payment-note">처음에는 둘 다 꺼져 있습니다. 완료 시 결제 방법을 선택하세요.</p></div><div class="field"><label>고객 메모</label><textarea id="memo" placeholder="시술 및 고객 특이사항">${esc(local?.memo||'')}</textarea></div></div><button class="primary" data-save-booking="1">${b?'수정 내용 저장':'시술 금액 계산·예약 저장'}</button>${b?`<button class="danger" style="width:100%" data-delete-booking="${b.id}">예약 삭제</button><button class="ghost" style="width:100%;margin-top:10px" data-new="1">새 예약 등록</button>`:''}<p class="note">예약 시점에는 매출과 회원권 사용액에 반영되지 않습니다. 시술 종료 시간이 지난 후 ‘완료’로 저장하면 정산됩니다.</p></div>`}
 
 /* Cash receipts: deposits count on their deposit date; prepaid redemption is not a new receipt. */
 function receiptMethod(method){return method==='cash'?'cash':method==='card'?'card':'unknown'}
@@ -480,7 +516,7 @@ function servicesPage(){
  '<div class="card service-manager">'+
  '<div class="treatment-genders">'+[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>
  '<button type="button" class="treatment-gender '+(settingsGender===g?'active':'')+'" data-setting-gender="'+g+'">'+label+'<span>'+(settingsGender===g?'⌃':'⌄')+'</span></button>').join('')+'</div>'+
- (settingsGender?'<div class="treatment-category-list">'+TREATMENT_CATEGORIES.map(cat=>{
+ (settingsGender?'<div class="treatment-category-list">'+TREATMENT_CATEGORIES.filter(cat=>settingsGender==='W'||cat!=='특별 케어').map(cat=>{
   const count=store.services.filter(s=>s.gender===settingsGender&&s.category===cat).length;
   return '<button type="button" class="treatment-category" data-setting-category="'+esc(cat)+'"><span>'+cat+'</span><span>'+count+'개 ›</span></button>';
  }).join('')+'</div>':'')+
@@ -600,6 +636,9 @@ function openTreatmentWheel(){
     const tapped=Number(item.dataset.treatmentIndex);
     const centered=Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/44)));
     if(tapped!==centered){col.scrollTo({top:tapped*44,behavior:'smooth'});return}
+    if(options[centered].id===BROW_PASS_BUY||options[centered].id===BROW_PASS_USE){
+      draft.delete(BROW_PASS_BUY);draft.delete(BROW_PASS_USE);
+    }
     draft.add(options[centered].id);
     refresh();
   });
@@ -732,6 +771,7 @@ function openClientDetail(id){
  document.querySelector('.client-detail-backdrop')?.remove();
  const count=store.bookings.filter(b=>b.clientId===c.id&&b.status!=='cancelled').length;
  const balance=walletLedger(c).balance;
+ const pass=browPassLedger(c);
  const backdrop=document.createElement('div');
  backdrop.className='client-detail-backdrop';
  backdrop.innerHTML=`<section class="client-detail-dialog" role="dialog" aria-modal="true" aria-label="고객 정보">
@@ -740,6 +780,7 @@ function openClientDetail(id){
  <p class="client-detail-phone">${esc(c.phone)}</p>
  <div class="client-detail-stat"><span>방문 기록</span><strong>${count}건</strong></div>
  <div class="client-detail-stat"><span>회원권 잔액</span><strong class="client-detail-credit">${money(balance)}</strong></div>
+ <div class="client-detail-stat"><span>눈썹펌 5회권</span><strong>${pass.balance}회 남음 (구매 ${pass.bought}회)</strong></div>
  <div class="client-detail-actions"><button type="button" data-client-edit="${c.id}">고객 정보 수정</button><button type="button" data-wallet-charge="${c.id}">회원권 충전</button><button type="button" class="client-delete" data-client-delete="${c.id}">고객 삭제</button></div>
  </section>`;
  document.body.appendChild(backdrop);
@@ -892,7 +933,7 @@ function openEndReminder(id){
  '<div><span>고객</span><strong>'+esc(clientName(b))+'</strong></div>'+
  '<div><span>시술</span><strong>'+esc(serviceNames(b))+'</strong></div>'+
  '<div><span>예약 종료</span><strong>'+esc(b.date+' '+b.end)+'</strong></div>'+
- '<div><span>시술 금액</span><strong>'+money(priceFor(b))+'</strong></div></div>'+
+ '<div><span>시술 금액</span><strong>'+money(priceFor(b))+'</strong></div>'+ (specialKind(b.items)==='use'?'<div><span>횟수권 사용</span><strong class="brow-pass-red">−1회 (잔여 '+(findClient(b.clientId)?browPassLedger(findClient(b.clientId)).balance:0)+'회)</strong></div>':'')+'</div>'+
  '<p>시술을 완료하셨나요?</p>'+
  '<div class="end-confirm-actions"><button class="end-confirm-later" type="button">나중에</button>'+
  '<button class="end-confirm-yes" type="button">완료 처리</button></div></section>';
@@ -915,7 +956,10 @@ function quickCompleteBooking(id,deposit,method){
  const totalDue=priceFor(b);
  const available=client?Math.max(0,walletLedger(client).balance):0;
  const credit=deposit?Number(deposit.creditedAmount||0):0;
- const memberUse=Math.min(totalDue,available+credit);
+ const special=specialKind(b.items);
+ if(special==='use'&&(!client||browPassLedger(client).balance<1)){alert('눈썹펌 횟수권 잔여 횟수가 없습니다. 구매를 먼저 등록해 주세요.');return false}
+ if(special==='buy'&&method!=='cash'){alert('눈썹펌 5회권 현금가 결제는 현금을 선택해 주세요.');return false}
+ const memberUse=special==='buy'?0:Math.min(totalDue,available+credit);
  const remainder=totalDue-memberUse;
  if(remainder>0&&method!=='cash'&&method!=='card'){alert('남은 금액의 현금·카드 결제가 필요합니다.');return false}
  // Snapshot the current booking and wallet before a single atomic localStorage write.
@@ -972,6 +1016,12 @@ function startQuickCompletion(id){
  if(bookingEndIsFuture(b.date,b.end)){alert('시술 종료 전에는 완료할 수 없습니다.');return}
  endReminderBusy=true;
  const c=findClient(b.clientId),amount=priceFor(b),available=c?Math.max(0,walletLedger(c).balance):0;
+ const special=specialKind(b.items);
+ if(special==='use'){
+  if(!c||browPassLedger(c).balance<1){alert('눈썹펌 횟수권 잔여 횟수가 없습니다. 구매를 먼저 등록해 주세요.');endReminderBusy=false;return}
+  if(amount===0){quickCompleteBooking(id,null,null);endReminderBusy=false;return}
+ }
+ if(special==='buy'){showQuickPaymentMethod(id);return}
  if(c&&walletLedger(c).received>0){
   if(available>=amount){quickCompleteBooking(id,null,null);endReminderBusy=false;return}
   const context={available,totalDue:amount,quickBookingId:id};
@@ -1047,7 +1097,14 @@ function commitCompletedBooking(ctx,deposit,paymentMethod){
  if(f.status==='paid'&&bookingEndIsFuture(f.date,f.end)){alert('시술 종료 시간 전에는 완료 처리할 수 없습니다. 예약 상태로 저장해 주세요.');return}
  // All mutation occurs together after confirmation; no partial member charge is saved.
  const credit=deposit?Number(deposit.creditedAmount):0;
- const memberUse=f.status==='paid'?Math.min(totalDue,Math.max(0,available+credit)):0;
+ const special=specialKind(checkedServices.map(id=>({id})));
+ if(f.status==='paid'&&special==='use'&&browPassLedger(client).balance+(old?.status==='paid'&&specialKind(old.items)==='use'?1:0)<1){
+  alert('눈썹펌 횟수권 잔여 횟수가 없습니다. 먼저 5회권을 구매해 주세요.');return
+ }
+ if(f.status==='paid'&&special==='buy'&&paymentMethod!=='cash'){
+  alert('눈썹펌 5회권 현금가 190,000원은 현금 결제를 선택해 주세요.');return
+ }
+ const memberUse=f.status==='paid'&&special!=='buy'?Math.min(totalDue,Math.max(0,available+credit)):0;
  const remaining=f.status==='paid'?Math.max(0,totalDue-memberUse):0;
  const selectedMethod=paymentMethod||null;
  if(f.status==='paid'&&remaining>0&&!selectedMethod){alert('남은 결제 금액의 결제 수단을 선택해 주세요.');return}
@@ -1083,6 +1140,15 @@ function submitBooking(){
  const totalDue=bookingAmountNow();
  const ctx={f,name,phone,old,client,available,totalDue};
  const currentMethod=root.querySelector('#payCard')?.checked?'card':root.querySelector('#payCash')?.checked?'cash':null;
+ const special=specialKind(checkedServices.map(id=>({id})));
+ if(special==='buy'&&(checkedServices.length!==1||extras.some(x=>Number(x.amount||0)!==0))){alert('눈썹펌 5회권 구매는 단독으로 등록해 주세요.');return}
+ if(special==='buy'&&f.status==='paid'){
+  if(currentMethod!=='cash'){alert('눈썹펌 5회권 현금가 190,000원은 현금 결제를 선택해야 합니다.');return}
+  commitCompletedBooking(ctx,null,'cash');return;
+ }
+ if(special==='use'&&f.status==='paid'&&browPassLedger(client).balance+(old?.status==='paid'&&specialKind(old.items)==='use'?1:0)<1){
+  alert('눈썹펌 횟수권 잔여 횟수가 없습니다. 구매 기록을 확인해 주세요.');return
+ }
  if(f.status!=='paid'){commitCompletedBooking(ctx,null,null);return}
  if(walletLedger(client).received>0){
   if(available<totalDue){memberPaymentPrompt(ctx);return}
@@ -1092,7 +1158,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=062',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=063',{updateViaCache:'none'}).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
