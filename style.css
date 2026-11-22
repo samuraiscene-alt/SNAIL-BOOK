@@ -500,3 +500,24 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .member-charge-wheel-option{height:52px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;color:#b1b3bb;font-weight:700;font-size:27px;cursor:pointer;user-select:none}
 .member-charge-wheel-option[aria-selected="true"]{color:#fff;font-size:33px}
 .member-charge-method-label{font-size:15px;margin:0 0 10px;text-align:center}
+
+/* v0.6.0 compact membership recharge modal: preserve the large 260px wheel */
+.member-charge-backdrop{padding:12px;padding-top:max(12px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.member-charge-dialog{box-sizing:border-box;max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:13px 16px 14px;overflow-y:auto;overscroll-behavior:contain}
+.member-charge-dialog h3{margin:0 0 9px;font-size:18px;line-height:1.3}
+.member-charge-wheel-frame{height:260px;margin:0 0 10px}
+.member-charge-methods{gap:8px}
+.member-charge-method{min-height:49px}
+.member-charge-preview{margin:10px 0;padding:8px 12px}
+.member-charge-preview>div{padding:4px 0}
+.member-charge-actions{gap:8px}
+.member-charge-actions button{min-height:46px}
+@media(max-height:680px){
+ .member-charge-dialog{padding:10px 14px}
+ .member-charge-dialog h3{margin-bottom:6px}
+ .member-charge-wheel-frame{margin-bottom:7px}
+ .member-charge-preview{margin:7px 0;padding:5px 10px}
+ .member-charge-preview>div{padding:3px 0}
+ .member-charge-method{min-height:44px}
+ .member-charge-actions button{min-height:42px}
+}
