@@ -737,10 +737,8 @@ function openClientDetail(id){
 }
 function chargeMember(id){
  const client=findClient(id);if(!client)return;
- const typed=prompt(client.name+' 회원권 충전 금액(원)','300000');if(typed===null)return;
- const amount=Number(typed.replace(/,/g,''));
- if(!Number.isSafeInteger(amount)||amount<=0||amount>50000000){alert('1원 이상 5천만원 이하 금액을 입력해 주세요.');return}
- // The posted salon membership menu offers bonus credit only for these three face values.
+ const units=[5,10,15,20,25,30,35,40,45,50,60,70,80,90,100];
+ // Values are 10,000 KRW units. Existing plan bonuses only apply to 20/30/50.
  const benefits={
   200000:{cash:220000,card:205000},
   300000:{cash:340000,card:320000},
@@ -748,8 +746,15 @@ function chargeMember(id){
  };
  const dlg=document.createElement('div');
  dlg.className='member-charge-backdrop';
- dlg.innerHTML='<section class="member-charge-dialog" role="dialog" aria-modal="true" aria-label="회원권 충전 결제 수단">'+
- '<h3>회원권 충전 결제 수단</h3>'+
+ dlg.innerHTML='<section class="member-charge-dialog" role="dialog" aria-modal="true" aria-label="회원권 충전 금액 및 결제 수단">'+
+ '<h3>회원권 충전</h3>'+
+ '<div class="member-charge-wheel-label">충전 금액 (만원)</div>'+
+ '<div class="member-charge-wheel-frame"><div class="member-charge-wheel-highlight"></div>'+
+ '<div class="member-charge-wheel-list" role="listbox" aria-label="충전 금액 선택">'+
+ '<div class="member-charge-wheel-pad"></div>'+
+ units.map((n,i)=>'<div class="member-charge-wheel-option" role="option" data-charge-index="'+i+'" aria-selected="false">'+String(n).padStart(2,'0')+'</div>').join('')+
+ '<div class="member-charge-wheel-pad"></div></div></div>'+
+ '<h4 class="member-charge-method-label">회원권 충전 결제 수단</h4>'+
  '<div class="member-charge-methods">'+
  '<button type="button" class="member-charge-method" data-charge-method="cash" aria-pressed="false">현금</button>'+
  '<button type="button" class="member-charge-method" data-charge-method="card" aria-pressed="false">카드</button></div>'+
@@ -758,8 +763,12 @@ function chargeMember(id){
  '<button type="button" class="member-charge-confirm" disabled>충전 저장</button></div></section>';
  document.body.appendChild(dlg);
  const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
- let method=null,done=false;
- const close=()=>{document.body.style.overflow=oldOverflow;dlg.remove()};
+ const wheel=dlg.querySelector('.member-charge-wheel-list');
+ const options=[...wheel.querySelectorAll('[data-charge-index]')];
+ const indexForScroll=()=>Math.max(0,Math.min(units.length-1,Math.round(wheel.scrollTop/52)));
+ let method=null,done=false,amount=300000;
+ let scrollEnd;
+ const close=()=>{clearTimeout(scrollEnd);document.body.style.overflow=oldOverflow;dlg.remove()};
  const preview=dlg.querySelector('.member-charge-preview'),confirmButton=dlg.querySelector('.member-charge-confirm');
  const update=()=>{
   dlg.querySelectorAll('[data-charge-method]').forEach(b=>{
@@ -767,12 +776,23 @@ function chargeMember(id){
    b.classList.toggle('active',selected);
    b.setAttribute('aria-pressed',selected?'true':'false');
   });
+  const selectedIndex=units.indexOf(amount/10000);
+  options.forEach((el,i)=>el.setAttribute('aria-selected',i===selectedIndex?'true':'false'));
   confirmButton.disabled=!method;
   const credited=method?(benefits[amount]?.[method]??amount):null;
   preview.innerHTML='<div><span>실제 결제액</span><b>'+money(amount)+'</b></div>'+
    '<div><span>서비스 혜택</span><b class="member-charge-bonus">'+(credited===null?'결제 수단을 선택하세요':'+ '+money(credited-amount))+'</b></div>'+
    '<div><span>회원권 충전 잔액</span><b>'+(credited===null?'—':money(credited))+'</b></div>';
  };
+ wheel.addEventListener('scroll',()=>{
+  amount=units[indexForScroll()]*10000;update();
+  clearTimeout(scrollEnd);
+  scrollEnd=setTimeout(()=>{if(wheel.isConnected)wheel.scrollTo({top:indexForScroll()*52,behavior:'smooth'})},130);
+ },{passive:true});
+ wheel.addEventListener('click',e=>{
+  const option=e.target.closest('[data-charge-index]');if(!option)return;
+  wheel.scrollTo({top:Number(option.dataset.chargeIndex)*52,behavior:'smooth'});
+ });
  dlg.querySelectorAll('[data-charge-method]').forEach(b=>b.onclick=()=>{
   method=method===b.dataset.chargeMethod?null:b.dataset.chargeMethod;update();
  });
@@ -780,6 +800,7 @@ function chargeMember(id){
  dlg.addEventListener('click',e=>{if(e.target===dlg)close()});
  confirmButton.onclick=()=>{
   if(!method||done)return;
+  amount=units[indexForScroll()]*10000;
   const credited=benefits[amount]?.[method]??amount;
   if(!confirm(client.name+' 회원권 '+money(amount)+'을 '+(method==='card'?'카드':'현금')+'으로 결제하고 '+money(credited)+' 충전할까요?'))return;
   done=true;confirmButton.disabled=true;
@@ -788,6 +809,7 @@ function chargeMember(id){
    planAmount:benefits[amount]?amount:null,paymentMethod:method,date:localDate(new Date()),createdAt:new Date().toISOString()});
   save();close();render();notify('회원권 충전 완료');
  };
+ requestAnimationFrame(()=>{if(wheel.isConnected){wheel.scrollTop=units.indexOf(30)*52;amount=300000;update()}});
  update();
 }
 function editClient(id){
@@ -922,5 +944,5 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=058',{updateViaCache:'none'}).catch(()=>{}));render();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=059',{updateViaCache:'none'}).catch(()=>{}));render();
 })();
