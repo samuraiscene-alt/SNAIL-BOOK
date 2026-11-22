@@ -356,3 +356,5 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .settings-service-new{padding:5px 6px}
 .settings-service-new input{background:#f7f8fa;color:#171a21;border:1px solid #9eb8e8;border-radius:8px;text-align:center;font-size:16px;font-weight:650;width:100%;min-width:0;height:38px}
 .settings-number-current{text-align:center;color:#f1f4ff;font-size:18px;font-weight:700;margin:10px}
+
+.settings-service-new[hidden]{display:none!important}
