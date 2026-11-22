@@ -409,3 +409,20 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .sales-accordion-body .receipt-customer{background:#f7f8fb;padding:13px 11px;border-radius:13px;margin-bottom:8px}
 .sales-accordion-body .receipt-customer summary{font-size:14px}
 @media(max-width:360px){.sales-range-controls strong{font-size:13px}.sales-range-controls{gap:3px}.sales-overview .stat{font-size:27px}}
+
+/* v0.5.3 horizontal periods with centered popup */
+.sales-popup-page{padding-bottom:24px}
+.sales-period-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:6px;background:#e6e8ef;border-radius:19px}
+.sales-period-button{background:transparent;color:#222734;border:0;min-height:51px;border-radius:14px;font-size:16px;font-weight:750}
+.sales-period-button.active{background:#fff;color:#2678f1;box-shadow:0 2px 7px #0001}
+.sales-popup-hint{text-align:center;color:#838896;font-size:13px;margin:20px 0}
+.sales-popup-backdrop{position:fixed;inset:0;z-index:110;background:rgba(0,0,0,.47);display:flex;align-items:center;justify-content:center;padding:18px;overscroll-behavior:contain}
+.sales-popup-panel{display:flex;flex-direction:column;width:min(100%,510px);max-height:min(82dvh,790px);min-height:260px;background:#fff;border-radius:25px;overflow:hidden;box-shadow:0 20px 60px #0003}
+.sales-popup-header{display:flex;align-items:center;justify-content:space-between;padding:17px 20px 13px;border-bottom:1px solid #edeef3;flex:0 0 auto;font-size:20px}
+.sales-popup-header button{border:0;background:#f1f2f6;color:#454956;border-radius:50%;width:34px;height:34px;font-size:25px;line-height:1}
+.sales-popup-scroll{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:10px 16px 20px;-webkit-overflow-scrolling:touch}
+.sales-popup-period-title{display:none}
+.sales-popup-scroll .sales-accordion-body{padding:0}
+.sales-popup-scroll .sales-range-nav{border-top:0}
+.sales-popup-scroll .sales-accordion-body>.section-title{margin-top:8px}
+.sales-popup-scroll .receipt-swipe-main{font-size:13px}
