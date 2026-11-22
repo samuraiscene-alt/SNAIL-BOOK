@@ -44,14 +44,14 @@ function dayDetail(d){let bs=visibleBookings(d);return `<div class="detail"><h3>
 function timeGrid(){
  const isWeek=view==='week',start=isWeek?weekStart(selected):selected;
  const days=isWeek?Array.from({length:7},(_,i)=>shift(start,i)):[selected];
- const first=isWeek?7:0,last=24,unit=isWeek?160:170;
+ const first=isWeek?7:0,last=24,unit=isWeek?220:220;
  const head=isWeek?'<div class="week-days-viewport"><div class="week-days">'+days.map(d=>'<button class="week-day '+(selected===d?'active':'')+'" data-date="'+d+'">'+w[dateOf(d).getDay()]+'<strong>'+dateOf(d).getDate()+'</strong><small>'+visibleBookings(d).length+'명</small></button>').join('')+'</div></div>':
  '<div class="day-head-summary">'+visibleBookings(selected).length+'명 예약 · 시간대별 현황</div>';
  const labels=Array.from({length:last-first+1},(_,i)=>'<div class="hour-lab">'+String(first+i).padStart(2,'0')+'</div>').join('');
  const cols=days.map(d=>'<div class="week-column">'+visibleBookings(d).map(b=>{
   const top=Math.max(0,(mins(b.start)-first*60)/60*unit);
   const planned=Math.max(0,mins(b.end)-mins(b.start));
-  const height=Math.max(isWeek?76:88,planned/60*unit-4);
+  const height=Math.max(108,planned/60*unit-4);
   const state=b.status==='paid'?'완료':b.status==='done'?'시술 완료 · 미정산':b.status==='noshow'?'노쇼':b.status==='cancelled'?'취소':'예약';
   return '<button type="button" class="event '+(isWeek?'week-event':'day-event')+(b.status==='paid'?' paid':'')+
    '" data-edit="'+b.id+'" style="top:'+top+'px;min-height:'+height+'px;height:'+height+'px">'+
