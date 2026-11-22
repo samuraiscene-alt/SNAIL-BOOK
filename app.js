@@ -34,7 +34,7 @@ function clientName(b){return findClient(b.clientId)?.name||b.name||'고객'}
 function dateTitle(d){const x=dateOf(d);return `${x.getMonth()+1}월 ${x.getDate()}일 ${w[x.getDay()]}요일`}
 const ICON_MARKUP=["<svg viewbox=\"0 0 28 28\"><rect height=\"19\" rx=\"3\" width=\"21\" x=\"3.5\" y=\"5.5\"></rect><path d=\"M8.5 3.5v5m11-5v5M4 11h20M8 15h.01M14 15h.01M20 15h.01M8 19h.01M14 19h.01M20 19h.01\"></path></svg>", "<svg viewbox=\"0 0 28 28\"><rect height=\"21\" rx=\"3\" width=\"18\" x=\"5\" y=\"3.5\"></rect><path d=\"M9 8h10M9 13h2m4 0h2m-8 4h2m4 0h2m-8 4h2m4 0h2\"></path></svg>", "<svg viewbox=\"0 0 28 28\"><path d=\"M23.2 10.5A10 10 0 1 0 23 18M20.2 5.5l3.5 5 2-5.8\"></path><text fill=\"currentColor\" font-family=\"Arial,sans-serif\" font-size=\"16\" font-weight=\"700\" stroke=\"none\" text-anchor=\"middle\" x=\"13.5\" y=\"19\">$</text></svg>", "<svg viewbox=\"0 0 28 28\"><path d=\"m11.7 3.8.5-1h3.6l.5 1 1.7.9 1.1-.2 2.5 2.5-.2 1.1.9 1.7 1 .5v3.6l-1 .5-.9 1.7.2 1.1-2.5 2.5-1.1-.2-1.7.9-.5 1h-3.6l-.5-1-1.7-.9-1.1.2-2.5-2.5.2-1.1-.9-1.7-1-.5v-3.6l1-.5.9-1.7-.2-1.1 2.5-2.5 1.1.2z\"></path><circle cx=\"14\" cy=\"12.1\" r=\"3.5\"></circle></svg>"];
 function nav(activeDark){const icons=ICON_MARKUP;return `<nav class="nav ${activeDark?'dark':''}">${['calendar','booking','sales','settings'].map((t,i)=>`<button aria-label="${['달력','시술 등록','매출','설정'][i]}" class="${tab===t?'active':''}" data-tab="${t}"><span class="nav-icon">${icons[i]}</span></button>`).join('')}</nav>`}
-function render(){const dark=tab==='calendar';root.className=dark?'calendar-root':'light';root.innerHTML=(tab==='calendar'?calendarPage():tab==='booking'?bookingPage():tab==='sales'?salesPage():settingsPage())+nav(dark)+(tab==='calendar'?'<button class="fab" data-new="1" aria-label="예약 추가">+</button>':'');bind();}
+function render(){const dark=tab==='calendar';root.className=dark?'calendar-root':'light';root.innerHTML=(tab==='calendar'?calendarPage():tab==='booking'?bookingPage():tab==='sales'?salesPage():settingsPage())+nav(dark)+(tab==='calendar'?'<button class="fab" data-new="1" aria-label="예약 추가">+</button>':'');bind();if(typeof setTimeout==='function')setTimeout(checkEndReminders,180);}
 function heading(){const anchor=view==='month'?`${cursor.getFullYear()}년 ${cursor.getMonth()+1}월`:view==='week'?`${shift(weekStart(selected),0).slice(5).replace('-','/')} – ${shift(weekStart(selected),6).slice(5).replace('-','/')}`:dateTitle(selected);return `<div class="heading-nav"><button data-move="-1" aria-label="이전">‹</button><strong>${anchor}</strong><button data-move="1" aria-label="다음">›</button></div>`}
 function weekStart(d){const day=dateOf(d).getDay();return shift(d,-((day+6)%7))}
 function calendarPage(){let html=`<div class="wrap"><div class="calendar-top"><button class="round-dark" data-panel="menu" aria-label="메뉴">≡</button><button class="round-dark" data-panel="search" aria-label="검색">⌕</button></div><div class="segment dark">${['month','week','day'].map((v,i)=>`<button data-view="${v}" class="${view===v?'active':''}">${['월간','주간','일간'][i]}</button>`).join('')}</div>${heading()}`;if(view==='month')html+=monthGrid();else html+=timeGrid();if(panel==='search')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup" role="dialog" aria-modal="true" aria-label="예약 검색"><div class="calendar-popup-title"><h3>예약 검색</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div><input id="calSearch" class="search" placeholder="고객 이름 검색" value="${esc(search)}"><div id="searchResults">${searchResults()}</div></section></div>`;if(panel==='menu')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup calendar-menu-popup" role="dialog" aria-modal="true" aria-label="달력 메뉴"><div class="calendar-popup-title"><h3>S’NAIL BOOK 메뉴</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div><button type="button" class="calendar-menu-option" data-today="1">오늘 날짜로 이동</button><button type="button" class="calendar-menu-option" data-tab="settings">설정 열기</button></section></div>`;if(panel==='appointments'&&visibleBookings(selected).length)html+=`<div class="appointment-backdrop" data-close-appointments="1"><section class="appointment-modal" role="dialog" aria-modal="true" aria-label="${dateTitle(selected)} 예약 상세"><button class="modal-close" data-close-appointments="1" aria-label="닫기">×</button>${dayDetail(selected)}</section></div>`;return html+'</div>'}
@@ -855,12 +855,138 @@ function restoreForm(){if(!tempForm)return;Object.entries(tempForm).forEach(([k,
 function val(id){return root.querySelector('#'+id)?.value||''}function readServices(){store.services.forEach(s=>{s.name=root.querySelector(`[data-s-name="${s.id}"]`)?.value?.trim()||s.name})}
 function addClient(){const name=val('clientName').trim(),phone=val('clientPhone').trim(),note=val('clientNote').trim();if(!name||!phone){alert('고객 이름과 연락처를 입력하세요.');return}if(store.clients.some(c=>c.name===name&&c.phone===phone)){alert('이미 등록된 고객입니다.');return}store.clients.push({id:uid(),name,phone,note});save();render();notify('고객 등록 완료')}
 
+
+/* Overdue appointments: only the operator can confirm completion.
+   Reminders are local to this device, and do not require a server. */
+const END_REMINDER_KEY='snailbook_end_reminder_snoozes_v062';
+let endReminderActiveId=null,endReminderBusy=false;
+function readEndReminderSnoozes(){
+ try{return JSON.parse(localStorage.getItem(END_REMINDER_KEY)||'{}')||{}}catch(e){return {}}
+}
+function postponeEndReminder(id){
+ const d=readEndReminderSnoozes();d[id]=Date.now()+10*60*1000;
+ try{localStorage.setItem(END_REMINDER_KEY,JSON.stringify(d))}catch(e){}
+}
+function endedReservedBookings(now=new Date()){
+ const snoozes=readEndReminderSnoozes(),clock=now.getTime();
+ return store.bookings.filter(b=>b.status==='reserved'&&b.date&&b.end&&
+  !bookingEndIsFuture(b.date,b.end,now)&&
+  Number.isFinite(new Date(b.date+'T'+b.end+':00').getTime())&&
+  (new Date(b.date+'T'+b.end+':00').getTime()<=clock)&&
+  Number(snoozes[b.id]||0)<=clock)
+  .sort((a,b)=>(a.date+'T'+a.end).localeCompare(b.date+'T'+b.end));
+}
+function checkEndReminders(){
+ if(endReminderBusy||endReminderActiveId||tab==='booking'||panel||document.querySelector('.member-shortage-backdrop,.member-charge-backdrop,.end-confirm-backdrop,.end-pay-backdrop,.calendar-popup-backdrop,.sales-popup-backdrop,.client-detail-backdrop'))return;
+ const booking=endedReservedBookings()[0];
+ if(booking)openEndReminder(booking.id);
+}
+function openEndReminder(id){
+ const b=store.bookings.find(x=>x.id===id&&x.status==='reserved');
+ if(!b||endReminderActiveId)return;
+ endReminderActiveId=id;postponeEndReminder(id);
+ const dlg=document.createElement('div');dlg.className='end-confirm-backdrop';
+ dlg.innerHTML='<section class="end-confirm-dialog" role="dialog" aria-modal="true" aria-label="시술 완료 확인">'+
+ '<h3><span class="end-confirm-warning">!</span> 시술 종료 시간이 지났습니다.</h3>'+
+ '<div class="end-confirm-summary">'+
+ '<div><span>고객</span><strong>'+esc(clientName(b))+'</strong></div>'+
+ '<div><span>시술</span><strong>'+esc(serviceNames(b))+'</strong></div>'+
+ '<div><span>예약 종료</span><strong>'+esc(b.date+' '+b.end)+'</strong></div>'+
+ '<div><span>시술 금액</span><strong>'+money(priceFor(b))+'</strong></div></div>'+
+ '<p>시술을 완료하셨나요?</p>'+
+ '<div class="end-confirm-actions"><button class="end-confirm-later" type="button">나중에</button>'+
+ '<button class="end-confirm-yes" type="button">완료 처리</button></div></section>';
+ document.body.appendChild(dlg);
+ const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
+ let closed=false;
+ const close=()=>{if(closed)return;closed=true;dlg.remove();document.body.style.overflow=oldOverflow;endReminderActiveId=null};
+ dlg.querySelector('.end-confirm-later').onclick=close;
+ dlg.addEventListener('click',e=>{if(e.target===dlg)close()});
+ dlg.querySelector('.end-confirm-yes').onclick=()=>{
+  close();
+  startQuickCompletion(id);
+ };
+}
+function quickCompleteBooking(id,deposit,method){
+ const b=store.bookings.find(x=>x.id===id);
+ if(!b||b.status!=='reserved'){alert('이미 처리되었거나 삭제된 예약입니다.');return false}
+ if(bookingEndIsFuture(b.date,b.end)){alert('시술 종료 전에는 완료할 수 없습니다.');return false}
+ const client=findClient(b.clientId);
+ const totalDue=priceFor(b);
+ const available=client?Math.max(0,walletLedger(client).balance):0;
+ const credit=deposit?Number(deposit.creditedAmount||0):0;
+ const memberUse=Math.min(totalDue,available+credit);
+ const remainder=totalDue-memberUse;
+ if(remainder>0&&method!=='cash'&&method!=='card'){alert('남은 금액의 현금·카드 결제가 필요합니다.');return false}
+ // Snapshot the current booking and wallet before a single atomic localStorage write.
+ const previous=JSON.stringify(store);
+ try{
+  if(deposit){
+   if(!client)throw Error('회원권 충전 고객 정보가 없습니다.');
+   if(!Array.isArray(client.walletDeposits))client.walletDeposits=[];
+   client.walletDeposits.push(deposit);
+  }
+  b.status='paid';b.memberUse=memberUse;b.paymentMethod=remainder>0?method:null;
+  b.paymentDate=localDate(new Date());b.updatedAt=new Date().toISOString();
+  save();
+ }catch(e){
+  store=JSON.parse(previous);
+  alert('저장에 실패했습니다. 기존 기록은 유지됩니다.');
+  return false;
+ }
+ notify('시술 완료·결제 저장 완료');render();
+ return true;
+}
+function showQuickPaymentMethod(id){
+ const b=store.bookings.find(x=>x.id===id&&x.status==='reserved');if(!b)return;
+ const dlg=document.createElement('div');dlg.className='end-pay-backdrop';
+ dlg.innerHTML='<section class="end-pay-dialog" role="dialog" aria-modal="true" aria-label="결제 수단 선택">'+
+ '<h3>시술 완료 · 결제 수단</h3>'+
+ '<p>시술 금액 <strong>'+money(priceFor(b))+'</strong></p>'+
+ '<div class="end-pay-methods"><button type="button" data-quick-method="cash" aria-pressed="false">현금</button>'+
+ '<button type="button" data-quick-method="card" aria-pressed="false">카드</button></div>'+
+ '<div class="end-pay-actions"><button type="button" class="end-pay-cancel">취소</button>'+
+ '<button type="button" class="end-pay-save" disabled>결제·완료 저장</button></div></section>';
+ document.body.appendChild(dlg);
+ let method=null,used=false;const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
+ const close=()=>{dlg.remove();document.body.style.overflow=oldOverflow;endReminderBusy=false};
+ dlg.querySelectorAll('[data-quick-method]').forEach(button=>button.onclick=()=>{
+  method=button.dataset.quickMethod;
+  dlg.querySelectorAll('[data-quick-method]').forEach(el=>{
+   el.classList.toggle('active',el.dataset.quickMethod===method);
+   el.setAttribute('aria-pressed',String(el.dataset.quickMethod===method));
+  });
+  dlg.querySelector('.end-pay-save').disabled=false;
+ });
+ dlg.querySelector('.end-pay-cancel').onclick=close;
+ dlg.addEventListener('click',e=>{if(e.target===dlg)close()});
+ dlg.querySelector('.end-pay-save').onclick=()=>{
+  if(!method||used)return;used=true;
+  const ok=quickCompleteBooking(id,null,method);
+  close();if(!ok)used=false;
+ };
+}
+function startQuickCompletion(id){
+ const b=store.bookings.find(x=>x.id===id&&x.status==='reserved');
+ if(!b)return;
+ if(bookingEndIsFuture(b.date,b.end)){alert('시술 종료 전에는 완료할 수 없습니다.');return}
+ endReminderBusy=true;
+ const c=findClient(b.clientId),amount=priceFor(b),available=c?Math.max(0,walletLedger(c).balance):0;
+ if(c&&walletLedger(c).received>0){
+  if(available>=amount){quickCompleteBooking(id,null,null);endReminderBusy=false;return}
+  const context={available,totalDue:amount,quickBookingId:id};
+  memberPaymentPrompt(context,()=>{endReminderBusy=false});
+  return;
+ }
+ if(amount<=0){quickCompleteBooking(id,null,null);endReminderBusy=false;return}
+ showQuickPaymentMethod(id);
+}
 const MEMBERSHIP_PLANS={
  200000:{cash:220000,card:205000},
  300000:{cash:340000,card:320000},
  500000:{cash:570000,card:550000}
 };
-function memberPaymentPrompt(context){
+function memberPaymentPrompt(context,onClose){
  const {available,totalDue}=context;
  const shortfall=totalDue-available;
  const back=document.createElement('div');
@@ -881,7 +1007,7 @@ function memberPaymentPrompt(context){
  '<div class="shortage-actions"><button type="button" class="shortage-cancel">취소</button><button type="button" class="shortage-confirm" disabled>확정·시술 저장</button></div></section>';
  document.body.appendChild(back);
  const previousOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
- const close=()=>{document.body.style.overflow=previousOverflow;back.remove()};
+ const close=()=>{document.body.style.overflow=previousOverflow;back.remove();if(onClose)onClose()};
  const current=(name)=>back.querySelector('input[name="'+name+'"]:checked')?.value;
  const update=()=>{
   const mode=current('shortageMode'),method=current('shortageMethod'),cost=Number(current('shortagePlan')||200000);
@@ -911,7 +1037,8 @@ function memberPaymentPrompt(context){
   const credited=mode==='recharge'?MEMBERSHIP_PLANS[face][method]:0;
   const deposit=mode==='recharge'?{id:uid(),amount:face,creditedAmount:credited,bonusAmount:credited-face,paymentMethod:method,planAmount:face,date:localDate(new Date()),createdAt:new Date().toISOString()}:null;
   close();
-  commitCompletedBooking(context,deposit,mode==='remainder'?method:null);
+  if(context.quickBookingId){quickCompleteBooking(context.quickBookingId,deposit,mode==='remainder'?method:null)}
+  else commitCompletedBooking(context,deposit,mode==='remainder'?method:null);
  };
  update();
 }
@@ -965,5 +1092,8 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=061',{updateViaCache:'none'}).catch(()=>{}));render();
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=062',{updateViaCache:'none'}).catch(()=>{}));
+if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
+if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
+render();
 })();
