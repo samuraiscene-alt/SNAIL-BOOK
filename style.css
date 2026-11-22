@@ -338,3 +338,7 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .treatment-category{display:flex;align-items:center;justify-content:space-between;width:100%;background:#fff;border:1px solid #dce2ed;border-radius:11px;text-align:left;padding:13px 15px;font-size:15px;font-weight:650;color:#303a4d}
 .treatment-category span:last-child{color:#8b9ab0;font-size:21px}
 .treatment-category.active{color:#087aff;background:#edf5ff}
+
+/* v0.4.5: tap the centered wheel service to select; keep removable selection chips */
+.treatment-wheel-backdrop .treatment-picked:empty{min-height:0;margin:0}
+.treatment-wheel-backdrop .treatment-option{cursor:pointer}
