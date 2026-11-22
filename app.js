@@ -340,8 +340,6 @@ function openTreatmentWheel(){
   back.innerHTML='<section class="wheel-sheet treatment-sheet" role="dialog" aria-modal="true" aria-label="시술 선택">'+
     '<div class="treatment-heading">'+(treatmentGender==='W'?'여자':'남자')+' · '+treatmentCategory+'</div>'+
     '<div class="wheel-frame treatment-frame"><div class="wheel-highlight"></div><div class="wheel-col treatment-col"><div class="wheel-pad"></div>'+optionHtml+'<div class="wheel-pad"></div></div></div>'+
-    '<div class="treatment-current"></div>'+
-    '<button type="button" class="treatment-add">+ 선택한 시술 추가</button>'+
     '<div class="treatment-picked"></div>'+
     '<div class="wheel-actions"><button type="button" class="wheel-cancel">취소</button><button type="button" class="wheel-done" aria-label="선택 완료">✓</button></div></section>';
   document.body.appendChild(back);
@@ -354,9 +352,7 @@ function openTreatmentWheel(){
   const picked=back.querySelector('.treatment-picked');
   function refresh(){
     const s=options[currentIndex];
-    back.querySelector('.treatment-current').textContent=s.name;
-    back.querySelector('.treatment-add').textContent=draft.has(s.id)?'✓ 추가됨':'+ 선택한 시술 추가';
-    picked.innerHTML=[...draft].map(id=>{const t=store.services.find(x=>x.id===id);return t?'<span class="treatment-tag">'+esc(t.name)+' <button type="button" data-draft-remove="'+t.id+'" aria-label="제거">×</button></span>':''}).join('')||'<span class="treatment-empty">선택된 시술 없음</span>';
+    picked.innerHTML=[...draft].map(id=>{const t=store.services.find(x=>x.id===id);return t?'<span class="treatment-tag">'+esc(t.name)+' <button type="button" data-draft-remove="'+t.id+'" aria-label="제거">×</button></span>':''}).join('');
   }
   col.addEventListener('scroll',()=>{
     currentIndex=Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/44)));
@@ -364,11 +360,14 @@ function openTreatmentWheel(){
     clearTimeout(scrollStop);
     scrollStop=setTimeout(()=>{if(col.isConnected)col.scrollTo({top:currentIndex*44,behavior:'smooth'})},110);
   },{passive:true});
-  col.addEventListener('click',e=>{const item=e.target.closest('[data-treatment-index]');if(item)col.scrollTo({top:Number(item.dataset.treatmentIndex)*44,behavior:'smooth'})});
-  back.querySelector('.treatment-add').onclick=()=>{
-    currentIndex=Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/44)));
-    draft.add(options[currentIndex].id);refresh();
-  };
+  col.addEventListener('click',e=>{
+    const item=e.target.closest('[data-treatment-index]');if(!item)return;
+    const tapped=Number(item.dataset.treatmentIndex);
+    const centered=Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/44)));
+    if(tapped!==centered){col.scrollTo({top:tapped*44,behavior:'smooth'});return}
+    draft.add(options[centered].id);
+    refresh();
+  });
   picked.onclick=e=>{const el=e.target.closest('[data-draft-remove]');if(el){draft.delete(el.dataset.draftRemove);refresh()}};
   back.querySelector('.wheel-cancel').onclick=()=>{close();tempForm=null};
   back.addEventListener('click',e=>{if(e.target===back){close();tempForm=null}});
