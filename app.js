@@ -281,7 +281,7 @@ function cashEntries(begin,end){
   const passAmount=passReceipt(b);
   if(passAmount>0&&date>=begin&&date<=end)records.push({id:b.id,date,name:clientName(b),service:'눈썹펌 5회권 구매',amount:passAmount,method:receiptMethod(b.passPaymentMethod),kind:'booking',clientId:b.clientId});
   if(amount>0&&date>=begin&&date<=end)
-   records.push({id:b.id,date,name:clientName(b),service:serviceNames(b),amount,method:receiptMethod(b.paymentMethod),kind:'booking',clientId:b.clientId});
+   records.push({id:b.id,date,name:clientName(b),service:serviceNames({...b,items:(b.items||[]).filter(i=>i.id!==BROW_PASS_BUY)}),amount,method:receiptMethod(b.paymentMethod),kind:'booking',clientId:b.clientId});
  }
  return records;
 }
@@ -1204,7 +1204,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=066',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=067',{updateViaCache:'none'}).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
