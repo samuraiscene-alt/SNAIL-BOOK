@@ -134,10 +134,10 @@ function browPassCard(client){
  const history=pass.history.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
  return '<div class="card brow-pass-card"><div class="row"><b>눈썹펌 5회권</b><span class="member-chip">'+(pass.balance?'이용 중':'모두 사용')+'</span></div>'+
  '<div class="brow-pass-counts"><span>구매 <b>'+pass.bought+'회</b></span><span>사용 <b class="brow-pass-red">'+pass.used+'회</b></span><span>잔여 <b class="brow-pass-blue">'+pass.balance+'회</b></span></div>'+
- '<div class="brow-pass-dots">'+Array.from({length:Math.min(pass.bought,15)},(_,i)=>'<span class="'+(i<pass.used?'used':'unused')+'">'+(i<pass.used?'✓':i+1)+'</span>').join('')+'</div>'+
+ '<div class="brow-pass-dots">'+Array.from({length:Math.min(pass.bought,15)},(_,i)=>'<span class="'+(i<pass.used?'used':'unused')+'">'+(i<pass.used?'✓':Math.min(pass.bought,15)-i)+'</span>').join('')+'</div>'+
  '<p class="note">예약만 등록하면 차감되지 않습니다. 시술 완료 시 1회 자동 차감합니다.</p>'+
  '<details class="brow-pass-history"><summary>사용·구매 기록 확인 ▾</summary>'+
- history.map(b=>'<div class="row"><span>'+esc(b.date)+' · '+(specialKind(b.items)==='buy'?'5회권 구매':'눈썹펌 사용')+'</span><b class="'+(specialKind(b.items)==='buy'?'brow-pass-blue':'brow-pass-red')+'">'+(specialKind(b.items)==='buy'?'+5':'−1')+'회</b></div>').join('')+'</details></div>';
+ history.map(b=>'<div class="row"><span>'+esc(b.date)+' · '+(specialKind(b.items)==='buy'?(b.passFirstUse?'5회권 구매 · 첫 1회 사용':'5회권 구매'):'눈썹펌 사용')+'</span><b class="'+(specialKind(b.items)==='buy'?'brow-pass-blue':'brow-pass-red')+'">'+(specialKind(b.items)==='buy'?(b.passFirstUse?'+5 / −1':'+5'):'−1')+'회</b></div>').join('')+'</details></div>';
 }
 function refreshMemberCard(){
  const host=root.querySelector('#membershipMount');if(!host)return;
@@ -173,7 +173,7 @@ function passReceipt(b){return b.status==='paid'&&specialKind(b.items)==='buy'?N
 function browPassLedger(client){
  const records=store.bookings.filter(b=>b.clientId===client.id&&b.status==='paid');
  const bought=records.filter(b=>specialKind(b.items)==='buy').length*5;
- const used=records.filter(b=>specialKind(b.items)==='use').length;
+ const used=records.filter(b=>specialKind(b.items)==='use').length+records.filter(b=>specialKind(b.items)==='buy'&&b.passFirstUse===true).length;
  return {bought,used,balance:Math.max(0,bought-used),history:records.filter(b=>specialKind(b.items))};
 }
 function ensureSpecialCatalog(){
@@ -930,7 +930,7 @@ function endedReservedBookings(now=new Date()){
   .sort((a,b)=>(a.date+'T'+a.end).localeCompare(b.date+'T'+b.end));
 }
 function checkEndReminders(){
- if(endReminderBusy||endReminderActiveId||tab==='booking'||panel||document.querySelector('.member-shortage-backdrop,.member-charge-backdrop,.pass-purchase-backdrop,.end-confirm-backdrop,.end-pay-backdrop,.calendar-popup-backdrop,.sales-popup-backdrop,.client-detail-backdrop'))return;
+ if(endReminderBusy||endReminderActiveId||tab==='booking'||panel||document.querySelector('.member-shortage-backdrop,.member-charge-backdrop,.pass-purchase-backdrop,.pass-first-use-backdrop,.end-confirm-backdrop,.end-pay-backdrop,.calendar-popup-backdrop,.sales-popup-backdrop,.client-detail-backdrop'))return;
  const booking=endedReservedBookings()[0];
  if(booking)openEndReminder(booking.id);
 }
@@ -975,9 +975,12 @@ function quickCompleteBooking(id,deposit,method,passMethod){
   if(deposit){if(!client)throw Error('고객 정보 없음');(client.walletDeposits??=[]).push(deposit)}
   b.status='paid';b.memberUse=memberUse;b.paymentMethod=totalDue>memberUse?method:null;
   b.passPaymentMethod=special==='buy'?passMethod:null;b.passPurchaseAmount=special==='buy'?passPrice(passMethod):0;
+  b.passFirstUse=special==='buy'?false:false;b.passFirstUseConfirmed=special!=='buy';
   b.paymentDate=localDate(new Date());b.updatedAt=new Date().toISOString();save();
  }catch(e){store=JSON.parse(snapshot);alert('저장에 실패했습니다.');return false}
- render();notify('시술 완료·결제 저장 완료');return true;
+ render();notify('시술 완료·결제 저장 완료');
+ if(special==='buy')setTimeout(()=>showPassFirstUsePrompt(b.id),40);
+ return true;
 }
 
 function showQuickPaymentMethod(id){
@@ -1029,6 +1032,40 @@ function startQuickCompletion(id){
  }
  if(amount<=0){quickCompleteBooking(id,null,null);endReminderBusy=false;return}
  showQuickPaymentMethod(id);
+}
+
+
+function showPassFirstUsePrompt(id){
+ const b=store.bookings.find(x=>x.id===id);
+ if(!b||b.status!=='paid'||specialKind(b.items)!=='buy'||b.passFirstUseConfirmed)return;
+ if(document.querySelector('.pass-first-use-backdrop'))return;
+ const dlg=document.createElement('div');dlg.className='pass-first-use-backdrop';
+ dlg.innerHTML='<section class="pass-first-use-dialog" role="dialog" aria-modal="true" aria-label="눈썹펌 5회권 첫 사용 확인">'+
+ '<h3>눈썹펌 5회권 구매 완료</h3>'+
+ '<div class="pass-first-use-info"><span>결제 금액</span><b>'+money(passReceipt(b))+'</b></div>'+
+ '<div class="pass-first-use-info"><span>구매 횟수</span><b>5회</b></div>'+
+ '<p>지금 1회를 사용하시겠습니까?</p>'+
+ '<div class="pass-first-use-actions"><button type="button" class="pass-first-no">N · 사용 안 함</button>'+
+ '<button type="button" class="pass-first-yes">Y · 1회 사용</button></div></section>';
+ document.body.appendChild(dlg);
+ const oldOverflow=document.body.style.overflow;document.body.style.overflow='hidden';let completed=false;
+ function finish(useNow){
+  if(completed)return;
+  const actual=store.bookings.find(x=>x.id===id);
+  if(!actual||actual.status!=='paid'||specialKind(actual.items)!=='buy'||actual.passFirstUseConfirmed){close();return}
+  completed=true;
+  const prev=JSON.stringify(store);
+  try{
+   actual.passFirstUse=useNow;
+   actual.passFirstUseConfirmed=true;
+   actual.updatedAt=new Date().toISOString();
+   save();
+  }catch(e){store=JSON.parse(prev);completed=false;alert('사용 횟수를 저장하지 못했습니다. 다시 선택해 주세요.');return}
+  close();render();notify(useNow?'눈썹펌 1회 사용 · 잔여 4회':'눈썹펌 5회 적립 완료');
+ }
+ function close(){dlg.remove();document.body.style.overflow=oldOverflow}
+ dlg.querySelector('.pass-first-no').onclick=()=>finish(false);
+ dlg.querySelector('.pass-first-yes').onclick=()=>finish(true);
 }
 
 function passPurchaseDialog(ctx){
@@ -1161,14 +1198,19 @@ function commitCompletedBooking(ctx,deposit,paymentMethod){
    paymentDate:f.status==='paid'?(old?.status==='paid'?old.paymentDate||old.date:localDate(new Date())):null,
    passPaymentMethod:f.status==='paid'&&kind==='buy'?passMethod:null,
    passPurchaseAmount:f.status==='paid'&&kind==='buy'?passPrice(passMethod):0,
+   passFirstUse:f.status==='paid'&&kind==='buy'&&old?.status==='paid'&&specialKind(old.items)==='buy'?!!old.passFirstUse:false,
+   passFirstUseConfirmed:f.status==='paid'&&kind==='buy'&&old?.status==='paid'&&specialKind(old.items)==='buy'?!!old.passFirstUseConfirmed:kind!=='buy',
    clientId:client.id,name,phone,date:f.date,start:f.start,end:f.end,items,extras:clone(extras),
    memberUse,status:f.status||'reserved',memo:f.memo||'',
    createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
   if(editing)store.bookings=store.bookings.map(x=>x.id===editing?b:x);else store.bookings.push(b);
   save();
  }catch(e){store=JSON.parse(snapshot);alert('저장에 실패했습니다.');return false}
+ const editingSavedId=editing||store.bookings[store.bookings.length-1].id;
  selected=f.date;cursor=dateOf(selected);tab='calendar';panel=null;editing=null;checkedServices=[];extras=[];tempForm=null;
- render();notify('예약 저장 완료');return true;
+ render();notify('예약 저장 완료');
+ if(f.status==='paid'&&kind==='buy'&&!(old?.status==='paid'&&specialKind(old.items)==='buy'))setTimeout(()=>showPassFirstUsePrompt(editingSavedId),40);
+ return true;
 }
 
 function submitBooking(){
@@ -1204,7 +1246,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=067',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=068',{updateViaCache:'none'}).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
