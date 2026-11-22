@@ -44,7 +44,7 @@ function dayDetail(d){let bs=visibleBookings(d);return `<div class="detail"><h3>
 function timeGrid(){
  const isWeek=view==='week',start=isWeek?weekStart(selected):selected;
  const days=isWeek?Array.from({length:7},(_,i)=>shift(start,i)):[selected];
- const first=isWeek?7:0,last=24,unit=isWeek?96:80;
+ const first=0,last=24,unit=isWeek?96:80;
  const head=isWeek?'<div class="week-days-viewport"><div class="week-days">'+days.map(d=>'<button class="week-day '+(selected===d?'active':'')+'" data-date="'+d+'">'+w[dateOf(d).getDay()]+'<strong>'+dateOf(d).getDate()+'</strong><small>'+visibleBookings(d).length+'명</small></button>').join('')+'</div></div>':
  '<div class="day-head-summary">'+visibleBookings(selected).length+'명 예약 · 시간대별 현황</div>';
  const labels=Array.from({length:last-first+1},(_,i)=>'<div class="hour-lab">'+String(first+i).padStart(2,'0')+'</div>').join('');
@@ -1306,7 +1306,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=075',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=076',{updateViaCache:'none'}).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
