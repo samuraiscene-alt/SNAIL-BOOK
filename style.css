@@ -555,3 +555,6 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .brow-pass-history{margin-top:10px;font-size:13px}
 .brow-pass-history summary{padding:8px;cursor:pointer;font-weight:700}
 .brow-pass-history .row{padding:6px 0}
+
+/* v0.6.4: cash-only five-visit special pack */
+.end-pay-methods button:disabled{opacity:.3;cursor:not-allowed}
