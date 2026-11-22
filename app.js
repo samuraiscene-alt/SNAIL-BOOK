@@ -162,20 +162,59 @@ function serviceCategory(s){
  return '네일'; // Legacy services remain usable without altering their prices or booking IDs.
 }
 function seedStructuredServices(){
- const known=[
-  {id:'catalog-w-care',name:'케어',price:20000,gender:'W',category:'네일'},
-  {id:'catalog-m-care',name:'케어',price:30000,gender:'M',category:'네일'},
-  {id:'catalog-w-gelcare',name:'젤컬러+케어',price:40000,gender:'W',category:'네일'},
-  {id:'catalog-m-gelcare',name:'젤컬러+케어',price:40000,gender:'M',category:'네일'}
- ];
- // Preserve previous user-created services. Add only the explicitly confirmed catalogue entries.
- let changed=false;
- for(const item of known){
-  if(store.services.some(s=>s.id===item.id))continue;
-  if(store.services.some(s=>s.name===item.name&&s.gender===item.gender&&s.category===item.category))continue;
-  store.services.push({...item,minutes:60});changed=true;
+ // Source: user's photographed SNAIL price menus; W/M prices are stored separately.
+ // Duration was not provided in the menu: keep an editable provisional 60 minutes.
+ if(store.catalogSeedVersion>=2)return;
+ const entries=[];
+ const add=(gender,category,name,price,id)=>{
+  entries.push({id:'menu-'+id,gender,category,name,price,minutes:60});
+ };
+ const both=(category,name,price,id)=>{add('W',category,name,price,'w-'+id);add('M',category,name,price,'m-'+id)};
+ add('W','네일','케어',20000,'w-nail-care');
+ add('M','네일','케어',30000,'m-nail-care');
+ both('네일','젤컬러+케어',40000,'nail-gel');
+ both('네일','풀글리터',55000,'nail-glitter');
+ both('네일','프렌치/그라데이션',65000,'nail-french');
+ add('W','페디','케어',30000,'w-pedi-care');
+ add('M','페디','케어',40000,'m-pedi-care');
+ both('페디','젤컬러+케어',50000,'pedi-gel');
+ both('페디','프렌치/그라데이션',75000,'pedi-french');
+ add('W','페디','스페셜 스파(각질케어)',100000,'w-pedi-spa');
+ add('M','페디','스페셜 스파(각질케어)',120000,'m-pedi-spa');
+ for(const [id,name,price] of [
+  ['brow','디자인 눈썹',25000],['philtrum','인중',20000],
+  ['cheek','볼',30000],['chin','턱',20000],['nape','뒷목',35000],
+  ['forehead','이마',20000],['hairline','헤어라인',45000],
+  ['browlift','브로우리프트',35000],['lash','케라틴 속눈썹펌',40000]
+ ])both('얼굴왁싱',name,price,'face-'+id);
+ add('M','얼굴왁싱','수염 일부',50000,'m-face-beardpart');
+ add('M','얼굴왁싱','수염 전체',100000,'m-face-beardall');
+ add('W','얼굴왁싱','풀페이스',120000,'w-face-full');
+ add('M','얼굴왁싱','풀페이스',150000,'m-face-full');
+ for(const [id,name,price] of [
+  ['handsfeet','손/발',10000],['halfarm','팔 하프',35000],
+  ['fullarm','팔 전체',70000],['halfleg','다리 하프',45000],
+  ['fullleg','다리 전체',80000],['underarm','겨드랑이',20000]
+ ])both('바디왁싱',name,price,'body-'+id);
+ add('W','바디왁싱','비키니',45000,'w-body-bikini');
+ add('W','바디왁싱','딥비키니',55000,'w-body-deepbikini');
+ for(const [id,name,wPrice,mPrice] of [
+  ['chest','가슴',25000,35000],['bellyline','배렛나루',10000,20000],
+  ['abdomen','복부',30000,40000],['back','등',40000,50000]
+ ]){
+  add('W','바디왁싱',name,wPrice,'w-body-'+id);
+  add('M','바디왁싱',name,mPrice,'m-body-'+id);
  }
- if(changed)save();
+ // Preserve custom services, historical IDs and changes to the four preexisting catalog entries.
+ const existing=store.services;
+ for(const item of entries){
+  if(existing.some(s=>s.id===item.id||s.gender===item.gender&&s.category===item.category&&s.name===item.name))continue;
+  if(item.category==='네일'&&['케어','젤컬러+케어'].includes(item.name)&&existing.some(s=>
+   s.gender===item.gender&&s.category==='네일'&&s.name===item.name))continue;
+  existing.push(item);
+ }
+ store.catalogSeedVersion=2;
+ save();
 }
 seedStructuredServices();
 function chooseTreatmentGroup(gender,category){
