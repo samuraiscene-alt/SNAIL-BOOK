@@ -342,3 +342,17 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 /* v0.4.5: tap the centered wheel service to select; keep removable selection chips */
 .treatment-wheel-backdrop .treatment-picked:empty{min-height:0;margin:0}
 .treatment-wheel-backdrop .treatment-option{cursor:pointer}
+
+/* v0.4.7 compact categorized service settings wheel */
+.service-manager{padding:16px}
+.settings-service-sheet{padding:20px 12px 16px}
+.settings-service-meta{text-align:center;color:#d8dce5;font-size:14px;min-height:25px;margin:10px 0 4px}
+.settings-service-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 12px}
+.settings-service-actions button{min-height:48px;border-radius:13px;font-weight:750;font-size:23px}
+.settings-service-remove{background:#612b37;border:1px solid #ba5867;color:#fff}
+.settings-service-add{background:#2662b5;border:1px solid #8bb9ff;color:#fff}
+.settings-service-actions button:disabled{opacity:.35}
+.settings-service-option{font-size:19px;cursor:pointer}
+.settings-service-new{padding:5px 6px}
+.settings-service-new input{background:#f7f8fa;color:#171a21;border:1px solid #9eb8e8;border-radius:8px;text-align:center;font-size:16px;font-weight:650;width:100%;min-width:0;height:38px}
+.settings-number-current{text-align:center;color:#f1f4ff;font-size:18px;font-weight:700;margin:10px}
