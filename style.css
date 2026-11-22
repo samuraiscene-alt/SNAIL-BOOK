@@ -704,3 +704,28 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .calendar-root .calendar-grid-wrap .event-heading{display:inline;font-size:13px;line-height:1.32}
 .calendar-root .calendar-grid-wrap .event .event-time,.calendar-root .calendar-grid-wrap .event .event-client{display:inline;font-size:13px;font-weight:800}
 .calendar-root .calendar-grid-wrap .event .event-service{display:inline;width:auto;margin-left:4px;font-size:12px;line-height:1.32;white-space:normal}
+
+/* v0.7.5: minimize iOS Safari input-focus zoom and keyboard layout jumps.
+   Preserve native scrolling when an input genuinely needs to be uncovered. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@supports (min-height:100svh){
+ #app,.light{min-height:100svh}
+}
+@supports (min-height:100svh){
+ #app:has(input:focus),#app:has(textarea:focus){
+  min-height:100svh;
+ }
+}
+@media (pointer:coarse){
+ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+ textarea,select{
+  font-size:16px!important;
+ }
+}
+.client-autocomplete{position:relative}
+.client-suggestions{
+ position:absolute;
+ max-height:min(270px,35vh);
+ overscroll-behavior:contain;
+ -webkit-overflow-scrolling:touch;
+}
