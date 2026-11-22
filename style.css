@@ -433,3 +433,13 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .sales-popup-panel{max-height:min(82dvh,790px)}
 .sales-popup-scroll .receipt-swipe-main{min-width:0;gap:8px}
 .sales-popup-scroll .receipt-swipe-main b{white-space:nowrap}
+
+/* v0.5.5: blue new receipts, red prepaid member deductions — matching names and services */
+.receipt-color-blue,.receipt-new-payment .receipt-row-name,.receipt-new-payment .receipt-swipe-main .sub,.receipt-new-payment .receipt-swipe-main b{color:#2678ee!important}
+.receipt-color-red,.receipt-member-use .receipt-row-name,.receipt-member-use .receipt-swipe-main .sub,.receipt-member-use .receipt-swipe-main b{color:#d9394c!important}
+.receipt-header-totals{display:inline-block;text-align:right;font-size:13px;line-height:1.5;white-space:normal}
+.receipt-header-member-tag{font-size:11px;font-weight:600}
+.receipt-row-name{display:block;font-weight:750;font-size:13px}
+.receipt-row-date{display:block;color:#626b7c;font-size:12px;margin-top:4px}
+.receipt-swipe-main>span{min-width:0;flex:1}
+.receipt-swipe-main b{white-space:nowrap}
