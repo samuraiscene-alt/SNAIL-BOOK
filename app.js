@@ -815,7 +815,9 @@ function memberPaymentPrompt(context){
    preview.innerHTML='<div><span>회원권 자동 차감</span><b class="shortage-red">−'+money(available)+'</b></div>'+
    '<div><span>추가 결제액</span><b>'+money(shortfall)+'</b></div>';
   }
-  back.querySelector('.shortage-confirm').disabled=!method;
+  const insufficient=mode==='recharge'&&method&&available+MEMBERSHIP_PLANS[cost][method]<totalDue;
+  if(insufficient)preview.innerHTML+='<p class="shortage-red" style="font-size:12px;margin:10px 0 0">선택한 회원권으로 부족액을 충당할 수 없습니다. 더 큰 상품을 선택하세요.</p>';
+  back.querySelector('.shortage-confirm').disabled=!method||!!insufficient;
  };
  back.querySelectorAll('input[type="radio"]').forEach(el=>el.addEventListener('change',update));
  back.querySelector('.shortage-cancel').onclick=close;
