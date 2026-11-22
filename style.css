@@ -328,3 +328,13 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .receipt-swipe-main>span{min-width:0;overflow-wrap:anywhere}
 .receipt-swipe-main .sub{display:block;font-size:12px;color:#81838d;margin-top:5px}
 .receipt-swipe-main b{flex:none;font-size:15px}
+
+/* v0.4.4: W/M accordion taxonomy followed by name-only iOS-style service wheel */
+.treatment-catalog{margin:12px 0}
+.treatment-genders{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.treatment-gender{border:1px solid #d1d6e3;border-radius:12px;background:#f2f5fa;color:#303a4d;min-height:50px;padding:12px 10px;display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:750}
+.treatment-gender.active{border-color:#4b8dff;background:#e8f1ff;color:#087aff}
+.treatment-category-list{display:flex;flex-direction:column;gap:7px;margin:9px 0 14px}
+.treatment-category{display:flex;align-items:center;justify-content:space-between;width:100%;background:#fff;border:1px solid #dce2ed;border-radius:11px;text-align:left;padding:13px 15px;font-size:15px;font-weight:650;color:#303a4d}
+.treatment-category span:last-child{color:#8b9ab0;font-size:21px}
+.treatment-category.active{color:#087aff;background:#edf5ff}
