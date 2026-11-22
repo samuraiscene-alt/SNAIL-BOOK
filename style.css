@@ -361,3 +361,6 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 
 /* v0.4.8: name-only service maintenance; price/time wheels removed */
 .settings-service-meta{font-size:13px}
+
+/* v0.4.9: show confirm only after at least one treatment is chosen */
+.treatment-wheel-backdrop .wheel-done[hidden]{display:none!important}
