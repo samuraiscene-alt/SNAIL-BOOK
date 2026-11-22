@@ -668,3 +668,33 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .calendar-root .calendar-grid-wrap .event .event-state{font-size:11px;opacity:.9}
 .calendar-root .calendar-grid-wrap .week-event{left:5px;right:5px}
 .calendar-root .calendar-grid-wrap .day-event{left:9px;right:9px}
+
+/* v0.7.3: compact scan-first booking cards, two main lines.
+   The card is NOT stretched to the appointment's whole duration. */
+.calendar-root .calendar-grid-wrap.week-schedule .schedule-area{
+ flex:0 0 1050px;width:1050px;min-width:1050px;
+}
+.calendar-root .calendar-grid-wrap.week-schedule .week-columns{
+ grid-template-columns:repeat(7,minmax(150px,1fr));
+}
+.calendar-root .week-days-viewport .week-days{
+ width:1088px;min-width:1088px;
+ grid-template-columns:repeat(7,minmax(150px,1fr));
+}
+.calendar-root .calendar-grid-wrap .event{
+ height:auto!important;min-height:0!important;
+ max-height:none;overflow-wrap:anywhere;
+ padding:7px 8px;gap:3px;
+ line-height:1.26;font-size:12px;
+}
+.calendar-root .calendar-grid-wrap .event-heading{
+ display:block;width:100%;font-size:13px;line-height:1.3;
+}
+.calendar-root .calendar-grid-wrap .event .event-time,
+.calendar-root .calendar-grid-wrap .event .event-client{
+ display:inline;font-size:13px;font-weight:800;
+}
+.calendar-root .calendar-grid-wrap .event .event-service{
+ display:block;width:100%;font-size:12px;
+ line-height:1.3;white-space:normal;
+}
