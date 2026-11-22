@@ -2,7 +2,7 @@
 const KEY='snailbook_v1_store';
 const base={clients:[],services:[{id:'s1',name:'젤네일',price:50000,minutes:60},{id:'s2',name:'젤 제거',price:10000,minutes:30},{id:'s3',name:'네일아트',price:70000,minutes:90},{id:'s4',name:'기본 케어',price:30000,minutes:45}],bookings:[],settings:{open:'10:00',close:'20:00',interval:30,closedDays:[0]}};
 function clone(o){return JSON.parse(JSON.stringify(o))}function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.bookings)&&Array.isArray(x.clients)&&Array.isArray(x.services))return {...clone(base),...x,settings:{...base.settings,...x.settings}}}catch(e){}return clone(base)}
-let store=load(),tab='calendar',view='month',cursor=new Date(),selected=localDate(new Date()),panel=null,editing=null,checkedServices=[],extras=[],search='',toastTimer,treatmentGender=null,treatmentCategory=null,settingsGender=null,settingsCategory=null;
+let store=load(),tab='calendar',view='month',cursor=new Date(),selected=localDate(new Date()),panel=null,editing=null,checkedServices=[],extras=[],search='',toastTimer,earlyFinishAuthorized=false,treatmentGender=null,treatmentCategory=null,settingsGender=null,settingsCategory=null;
 const root=document.getElementById('app');const w=['일','월','화','수','목','금','토'];
 function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function localDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
@@ -13,9 +13,10 @@ function bookingEndIsFuture(date,end,now=new Date()){
  const endAt=new Date(date+'T'+end+':00');
  return Number.isFinite(endAt.getTime())&&endAt.getTime()>now.getTime();
 }
+function bookingHasStarted(date,start,now=new Date()){if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')||!/^([01]\d|2[0-3]):[0-5]\d$/.test(start||''))return false;const t=new Date(date+'T'+start+':00').getTime();return Number.isFinite(t)&&t<=now.getTime()}
 function repairFutureCompletedBookings(){
  // Preserve a snapshot before correcting previously paid future appointments.
- const invalid=store.bookings.filter(b=>b.status==='paid'&&bookingEndIsFuture(b.date,b.end));
+ const invalid=store.bookings.filter(b=>b.status==='paid'&&!b.actualCompletionAt&&bookingEndIsFuture(b.date,b.end));
  if(!invalid.length)return;
  const marker='futureCompletionRepairV061';
  if(store[marker])return;
@@ -34,7 +35,7 @@ function clientName(b){return findClient(b.clientId)?.name||b.name||'고객'}
 function dateTitle(d){const x=dateOf(d);return `${x.getMonth()+1}월 ${x.getDate()}일 ${w[x.getDay()]}요일`}
 const ICON_MARKUP=["<svg viewbox=\"0 0 28 28\"><rect height=\"19\" rx=\"3\" width=\"21\" x=\"3.5\" y=\"5.5\"></rect><path d=\"M8.5 3.5v5m11-5v5M4 11h20M8 15h.01M14 15h.01M20 15h.01M8 19h.01M14 19h.01M20 19h.01\"></path></svg>", "<svg viewbox=\"0 0 28 28\"><rect height=\"21\" rx=\"3\" width=\"18\" x=\"5\" y=\"3.5\"></rect><path d=\"M9 8h10M9 13h2m4 0h2m-8 4h2m4 0h2m-8 4h2m4 0h2\"></path></svg>", "<svg viewbox=\"0 0 28 28\"><path d=\"M23.2 10.5A10 10 0 1 0 23 18M20.2 5.5l3.5 5 2-5.8\"></path><text fill=\"currentColor\" font-family=\"Arial,sans-serif\" font-size=\"16\" font-weight=\"700\" stroke=\"none\" text-anchor=\"middle\" x=\"13.5\" y=\"19\">$</text></svg>", "<svg viewbox=\"0 0 28 28\"><path d=\"m11.7 3.8.5-1h3.6l.5 1 1.7.9 1.1-.2 2.5 2.5-.2 1.1.9 1.7 1 .5v3.6l-1 .5-.9 1.7.2 1.1-2.5 2.5-1.1-.2-1.7.9-.5 1h-3.6l-.5-1-1.7-.9-1.1.2-2.5-2.5.2-1.1-.9-1.7-1-.5v-3.6l1-.5.9-1.7-.2-1.1 2.5-2.5 1.1.2z\"></path><circle cx=\"14\" cy=\"12.1\" r=\"3.5\"></circle></svg>"];
 function nav(activeDark){const icons=ICON_MARKUP;return `<nav class="nav ${activeDark?'dark':''}">${['calendar','booking','sales','settings'].map((t,i)=>`<button aria-label="${['달력','시술 등록','매출','설정'][i]}" class="${tab===t?'active':''}" data-tab="${t}"><span class="nav-icon">${icons[i]}</span></button>`).join('')}</nav>`}
-function render(){const dark=tab==='calendar';root.className=dark?'calendar-root':'light';root.innerHTML=(tab==='calendar'?calendarPage():tab==='booking'?bookingPage():tab==='sales'?salesPage():settingsPage())+nav(dark)+(tab==='calendar'?'<button class="fab" data-new="1" aria-label="예약 추가">+</button>':'');bind();if(typeof setTimeout==='function')setTimeout(checkEndReminders,180);}
+function render(){const dark=tab==='calendar';root.className=dark?'calendar-root':'light';root.innerHTML=(tab==='calendar'?calendarPage():tab==='booking'?bookingPage():tab==='sales'?salesPage():settingsPage())+nav(dark)+(tab==='calendar'?'<button class="fab" data-new="1" aria-label="예약 추가">+</button>':'');bind();if(typeof setTimeout==='function')setTimeout(()=>{checkPendingPassFirstUse();checkEndReminders()},180);}
 function heading(){const anchor=view==='month'?`${cursor.getFullYear()}년 ${cursor.getMonth()+1}월`:view==='week'?`${shift(weekStart(selected),0).slice(5).replace('-','/')} – ${shift(weekStart(selected),6).slice(5).replace('-','/')}`:dateTitle(selected);return `<div class="heading-nav"><button data-move="-1" aria-label="이전">‹</button><strong>${anchor}</strong><button data-move="1" aria-label="다음">›</button></div>`}
 function weekStart(d){const day=dateOf(d).getDay();return shift(d,-((day+6)%7))}
 function calendarPage(){let html=`<div class="wrap"><div class="calendar-top"><button class="round-dark" data-panel="menu" aria-label="메뉴">≡</button><button class="round-dark" data-panel="search" aria-label="검색">⌕</button></div><div class="segment dark">${['month','week','day'].map((v,i)=>`<button data-view="${v}" class="${view===v?'active':''}">${['월간','주간','일간'][i]}</button>`).join('')}</div>${heading()}`;if(view==='month')html+=monthGrid();else html+=timeGrid();if(panel==='search')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup" role="dialog" aria-modal="true" aria-label="예약 검색"><div class="calendar-popup-title"><h3>예약 검색</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div><input id="calSearch" class="search" placeholder="고객 이름 검색" value="${esc(search)}"><div id="searchResults">${searchResults()}</div></section></div>`;if(panel==='menu')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup calendar-menu-popup" role="dialog" aria-modal="true" aria-label="달력 메뉴"><div class="calendar-popup-title"><h3>S’NAIL BOOK 메뉴</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div><button type="button" class="calendar-menu-option" data-today="1">오늘 날짜로 이동</button><button type="button" class="calendar-menu-option" data-tab="settings">설정 열기</button></section></div>`;if(panel==='appointments'&&visibleBookings(selected).length)html+=`<div class="appointment-backdrop" data-close-appointments="1"><section class="appointment-modal" role="dialog" aria-modal="true" aria-label="${dateTitle(selected)} 예약 상세"><button class="modal-close" data-close-appointments="1" aria-label="닫기">×</button>${dayDetail(selected)}</section></div>`;return html+'</div>'}
@@ -262,7 +263,7 @@ function chooseTreatmentGroup(gender,category){
  else{treatmentGender=gender;treatmentCategory=category}
  render();restoreForm();
 }
-function bookingPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자가 설치한 기기에서 연동할 예정입니다. 현재 버전은 캘린더 연동 기능을 실행하지 않습니다.');const b=editing?store.bookings.find(x=>x.id===editing):null;let client=b?findClient(b.clientId):null;let local=editing?b:null;let selections=checkedServices.map(id=>store.services.find(x=>x.id===id)).filter(Boolean),total=selections.reduce((a,s)=>a+Number(s.price),0)+extras.reduce((a,e)=>a+Number(e.amount),0);return `<div class="wrap"><h2 class="form-title">${b?'시술 예약 수정':'시술 예약 등록'}</h2><div class="card"><div class="field"><label>고객 이름</label><div class="client-autocomplete"><input id="name" autocomplete="off" placeholder="고객 이름 또는 초성 입력" value="${esc(client?.name||local?.name||'')}"><div id="clientSuggestions" class="client-suggestions" hidden></div></div></div><div class="field"><label>연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" value="${esc(client?.phone||local?.phone||'')}"></div><div class="field"><label>시술일</label><input id="date" type="date" value="${esc(local?.date||selected)}"></div><div class="field"><label>시술시간</label><input id="start" type="time" value="${esc(local?.start||store.settings.open)}"></div><div class="field"><label>종료시간</label><input id="end" type="time" value="${esc(local?.end||hour(mins(store.settings.open)+60))}"></div></div><div id="membershipMount"></div><div class="card"><div class="row"><b>시술 내역</b><span class="muted">복수 선택 가능</span></div><div class="treatment-catalog"><div class="treatment-genders">${[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>`<button type="button" class="treatment-gender ${treatmentGender===g?'active':''}" data-treatment-gender="${g}">${label}<span>${treatmentGender===g?'⌃':'⌄'}</span></button>`).join('')}</div>${treatmentGender?`<div class="treatment-category-list">${TREATMENT_CATEGORIES.filter(cat=>treatmentGender==='W'||cat!=='특별 케어').map(cat=>`<button type="button" class="treatment-category ${treatmentCategory===cat?'active':''}" data-treatment-category="${cat}"><span>${cat}</span><span>›</span></button>`).join('')}</div>`:''}</div><div class="selected-treatments">${selections.map(s=>`<div class="selected-treatment"><span>${esc(s.name)}</span><button type="button" data-treatment-remove="${s.id}" aria-label="선택 해제">×</button></div>`).join('')||'<div class="muted">선택된 시술이 없습니다.</div>'}</div><div class="row" style="margin-top:13px"><span class="muted">선택 시술 예상 시간</span><b>${selections.reduce((a,s)=>a+Number(s.minutes),0)}분</b></div></div><div class="card"><div class="row"><b>그 외 추가 비용·할인</b><button class="secondary" data-add-extra="1">+ 항목 추가</button></div>${extras.map((e,i)=>`<div class="field"><input aria-label="추가 항목 이름" data-extra-name="${i}" placeholder="추가 아트·할인" value="${esc(e.name)}"><input aria-label="추가 금액" data-extra-amount="${i}" type="number" placeholder="할인 시 음수" value="${e.amount}"><button class="danger" data-remove-extra="${i}">×</button></div>`).join('')}<div class="row" style="margin-top:15px"><b>예상 결제 금액</b><b id="bookingTotal" style="font-size:22px;color:#087aff">${money(total+(b?.passPaymentMethod==="card"&&specialKind(selections)==="buy"?10000:0))}</b></div></div><div class="card"><div class="field"><label>진행 상태</label><select id="status"><option value="reserved" ${!local||local.status==='reserved'?'selected':''}>예약</option><option value="paid" ${local?.status==='paid'?'selected':''}>완료</option>${local?.status==='done'?'<option value="done" selected>기존 시술 완료 · 정산 전</option>':''}<option value="cancelled" ${local?.status==='cancelled'?'selected':''}>예약 취소</option><option value="noshow" ${local?.status==='noshow'?'selected':''}>노쇼</option></select></div><div class="payment-method-block"><b>결제 방법</b><div class="payment-switch-row"><label class="payment-switch-option"><span>카드</span><input type="checkbox" id="payCard" ${local?.paymentMethod==='card'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label><label class="payment-switch-option"><span>현금</span><input type="checkbox" id="payCash" ${local?.paymentMethod==='cash'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label></div><p class="payment-note">처음에는 둘 다 꺼져 있습니다. 완료 시 결제 방법을 선택하세요.</p></div><div class="field"><label>고객 메모</label><textarea id="memo" placeholder="시술 및 고객 특이사항">${esc(local?.memo||'')}</textarea></div></div><button class="primary" data-save-booking="1">${b?'수정 내용 저장':'시술 금액 계산·예약 저장'}</button>${b?`<button class="danger" style="width:100%" data-delete-booking="${b.id}">예약 삭제</button><button class="ghost" style="width:100%;margin-top:10px" data-new="1">새 예약 등록</button>`:''}<p class="note">예약 시점에는 매출과 회원권 사용액에 반영되지 않습니다. 시술 종료 시간이 지난 후 ‘완료’로 저장하면 정산됩니다.</p></div>`}
+function bookingPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자가 설치한 기기에서 연동할 예정입니다. 현재 버전은 캘린더 연동 기능을 실행하지 않습니다.');const b=editing?store.bookings.find(x=>x.id===editing):null;let client=b?findClient(b.clientId):null;let local=editing?b:null;let selections=checkedServices.map(id=>store.services.find(x=>x.id===id)).filter(Boolean),total=selections.reduce((a,s)=>a+Number(s.price),0)+extras.reduce((a,e)=>a+Number(e.amount),0);return `<div class="wrap"><h2 class="form-title">${b?'시술 예약 수정':'시술 예약 등록'}</h2><div class="card"><div class="field"><label>고객 이름</label><div class="client-autocomplete"><input id="name" autocomplete="off" placeholder="고객 이름 또는 초성 입력" value="${esc(client?.name||local?.name||'')}"><div id="clientSuggestions" class="client-suggestions" hidden></div></div></div><div class="field"><label>연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" value="${esc(client?.phone||local?.phone||'')}"></div><div class="field"><label>시술일</label><input id="date" type="date" value="${esc(local?.date||selected)}"></div><div class="field"><label>시술시간</label><input id="start" type="time" value="${esc(local?.start||store.settings.open)}"></div><div class="field"><label>종료시간</label><input id="end" type="time" value="${esc(local?.end||hour(mins(store.settings.open)+60))}"></div></div><div id="membershipMount"></div><div class="card"><div class="row"><b>시술 내역</b><span class="muted">복수 선택 가능</span></div><div class="treatment-catalog"><div class="treatment-genders">${[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>`<button type="button" class="treatment-gender ${treatmentGender===g?'active':''}" data-treatment-gender="${g}">${label}<span>${treatmentGender===g?'⌃':'⌄'}</span></button>`).join('')}</div>${treatmentGender?`<div class="treatment-category-list">${TREATMENT_CATEGORIES.filter(cat=>treatmentGender==='W'||cat!=='특별 케어').map(cat=>`<button type="button" class="treatment-category ${treatmentCategory===cat?'active':''}" data-treatment-category="${cat}"><span>${cat}</span><span>›</span></button>`).join('')}</div>`:''}</div><div class="selected-treatments">${selections.map(s=>`<div class="selected-treatment"><span>${esc(s.name)}</span><button type="button" data-treatment-remove="${s.id}" aria-label="선택 해제">×</button></div>`).join('')||'<div class="muted">선택된 시술이 없습니다.</div>'}</div><div class="row" style="margin-top:13px"><span class="muted">선택 시술 예상 시간</span><b>${selections.reduce((a,s)=>a+Number(s.minutes),0)}분</b></div></div><div class="card"><div class="row"><b>그 외 추가 비용·할인</b><button class="secondary" data-add-extra="1">+ 항목 추가</button></div>${extras.map((e,i)=>`<div class="field"><input aria-label="추가 항목 이름" data-extra-name="${i}" placeholder="추가 아트·할인" value="${esc(e.name)}"><input aria-label="추가 금액" data-extra-amount="${i}" type="number" placeholder="할인 시 음수" value="${e.amount}"><button class="danger" data-remove-extra="${i}">×</button></div>`).join('')}<div class="row" style="margin-top:15px"><b>예상 결제 금액</b><b id="bookingTotal" style="font-size:22px;color:#087aff">${money(total+(b?.passPaymentMethod==="card"&&specialKind(selections)==="buy"?10000:0))}</b></div></div><div class="card"><div class="field"><label>진행 상태</label><select id="status"><option value="reserved" ${!local||local.status==='reserved'?'selected':''}>예약</option><option value="paid" ${local?.status==='paid'?'selected':''}>완료</option>${local?.status==='done'?'<option value="done" selected>기존 시술 완료 · 정산 전</option>':''}<option value="cancelled" ${local?.status==='cancelled'?'selected':''}>예약 취소</option><option value="noshow" ${local?.status==='noshow'?'selected':''}>노쇼</option></select></div><div class="payment-method-block"><b>결제 방법</b><div class="payment-switch-row"><label class="payment-switch-option"><span>카드</span><input type="checkbox" id="payCard" ${local?.paymentMethod==='card'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label><label class="payment-switch-option"><span>현금</span><input type="checkbox" id="payCash" ${local?.paymentMethod==='cash'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label></div><p class="payment-note">처음에는 둘 다 꺼져 있습니다. 완료 시 결제 방법을 선택하세요.</p></div><div class="field"><label>고객 메모</label><textarea id="memo" placeholder="시술 및 고객 특이사항">${esc(local?.memo||'')}</textarea></div></div><button class="primary" data-save-booking="1">${b?'수정 내용 저장':'시술 금액 계산·예약 저장'}</button>${b&&b.status==='reserved'?`<button type="button" class="early-complete-button" data-early-complete="1">✓ 지금 시술 완료</button>`:''}${b?`<button class="danger" style="width:100%" data-delete-booking="${b.id}">예약 삭제</button><button class="ghost" style="width:100%;margin-top:10px" data-new="1">새 예약 등록</button>`:''}<p class="note">예약 시점에는 매출과 회원권 사용액에 반영되지 않습니다. 시술 종료 시간이 지난 후 ‘완료’로 저장하면 정산됩니다.</p></div>`}
 
 /* Cash receipts: deposits count on their deposit date; prepaid redemption is not a new receipt. */
 function receiptMethod(method){return method==='cash'?'cash':method==='card'?'card':'unknown'}
@@ -900,7 +901,7 @@ if(payCard&&payCash){
  payCard.onchange=()=>{if(payCard.checked)payCash.checked=false;preview()};
  payCash.onchange=()=>{if(payCash.checked)payCard.checked=false;preview()};
 }
-root.querySelectorAll('[data-save-booking]').forEach(e=>e.onclick=submitBooking);root.querySelectorAll('[data-delete-booking]').forEach(e=>e.onclick=()=>{if(confirm('이 예약을 삭제할까요?')){store.bookings=store.bookings.filter(b=>b.id!==e.dataset.deleteBooking);save();editing=null;tab='calendar';render();notify('예약 삭제 완료')}});root.querySelectorAll('[data-sales-open]').forEach(e=>e.onclick=()=>{salesPopupPeriod=e.dataset.salesOpen;render()});root.querySelectorAll('[data-sales-close]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;salesPopupPeriod=null;render()});root.querySelectorAll('[data-sales-move]').forEach(e=>e.onclick=()=>{const period=e.dataset.salesScope,n=+e.dataset.salesMove;if(period==='week')selected=shift(selected,n*7);else if(period==='year')cursor=new Date(cursor.getFullYear()+n,cursor.getMonth(),1);else cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);render()});root.querySelectorAll('[data-setting-gender]').forEach(e=>e.onclick=()=>{settingsGender=settingsGender===e.dataset.settingGender?null:e.dataset.settingGender;settingsCategory=null;render()});
+root.querySelectorAll('[data-save-booking]').forEach(e=>e.onclick=submitBooking);root.querySelector('[data-early-complete]')?.addEventListener('click',requestEarlyCompletion);root.querySelectorAll('[data-delete-booking]').forEach(e=>e.onclick=()=>{if(confirm('이 예약을 삭제할까요?')){store.bookings=store.bookings.filter(b=>b.id!==e.dataset.deleteBooking);save();editing=null;tab='calendar';render();notify('예약 삭제 완료')}});root.querySelectorAll('[data-sales-open]').forEach(e=>e.onclick=()=>{salesPopupPeriod=e.dataset.salesOpen;render()});root.querySelectorAll('[data-sales-close]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;salesPopupPeriod=null;render()});root.querySelectorAll('[data-sales-move]').forEach(e=>e.onclick=()=>{const period=e.dataset.salesScope,n=+e.dataset.salesMove;if(period==='week')selected=shift(selected,n*7);else if(period==='year')cursor=new Date(cursor.getFullYear()+n,cursor.getMonth(),1);else cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);render()});root.querySelectorAll('[data-setting-gender]').forEach(e=>e.onclick=()=>{settingsGender=settingsGender===e.dataset.settingGender?null:e.dataset.settingGender;settingsCategory=null;render()});
 root.querySelectorAll('[data-setting-category]').forEach(e=>e.onclick=()=>{settingsCategory=e.dataset.settingCategory;openSettingsServiceWheel()});root.querySelector('[data-open-closed-wheel]')?.addEventListener('click',openClosedDaysWheel);root.querySelector('[data-save-hours]')?.addEventListener('click',()=>{store.settings={open:val('open'),close:val('close'),interval:+val('interval'),closedDays:[...root.querySelectorAll('[data-closed-day]:checked')].map(e=>+e.dataset.closedDay)};if(mins(store.settings.open)>=mins(store.settings.close)){alert('영업 종료는 시작보다 늦어야 합니다.');return}save();notify('예약 시간 저장 완료')});root.querySelector('[data-add-client]')?.addEventListener('click',addClient);root.querySelectorAll('[data-client-detail]').forEach(e=>e.onclick=()=>openClientDetail(e.dataset.clientDetail));root.querySelector('[data-export]')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({app:'SNAIL_BOOK',version:1,exportedAt:new Date().toISOString(),data:store},null,2)],{type:'application/json'});let a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download='SNAIL_BOOK_backup_'+localDate(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),500)});root.querySelector('#importFile')?.addEventListener('change',async e=>{let file=e.target.files[0];if(!file)return;try{const x=JSON.parse(await file.text());if(x.app!=='SNAIL_BOOK'||!x.data||!Array.isArray(x.data.clients)||!Array.isArray(x.data.bookings)||!Array.isArray(x.data.services))throw Error('형식 오류');if(!confirm('현재 모든 데이터를 백업 파일로 교체할까요?'))return;store=x.data;save();render();notify('복원 완료')}catch(err){alert('S’NAIL BOOK 백업 파일이 아닙니다.')}});root.querySelectorAll('[data-reset-choice]').forEach(e=>e.addEventListener('change',()=>{const btn=root.querySelector('[data-reset-selected]');if(btn)btn.disabled=!root.querySelector('[data-reset-choice]:checked')}));root.querySelector('[data-reset-selected]')?.addEventListener('click',resetSelectedData)}
 function bindSearchResults(){root.querySelectorAll('#searchResults [data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()})}
 let tempForm=null;function captureForm(){if(tab!=='booking')return;tempForm={};['name','phone','date','start','end','status','memo','memberUse','payCard','payCash'].forEach(k=>{let e=root.querySelector('#'+k);if(e)tempForm[k]=e.type==='checkbox'?e.checked:e.value});extras=extras.map((x,i)=>({name:root.querySelector(`[data-extra-name="${i}"]`)?.value||'',amount:Number(root.querySelector(`[data-extra-amount="${i}"]`)?.value||0)}))}
@@ -930,7 +931,7 @@ function endedReservedBookings(now=new Date()){
   .sort((a,b)=>(a.date+'T'+a.end).localeCompare(b.date+'T'+b.end));
 }
 function checkEndReminders(){
- if(endReminderBusy||endReminderActiveId||tab==='booking'||panel||document.querySelector('.member-shortage-backdrop,.member-charge-backdrop,.pass-purchase-backdrop,.pass-first-use-backdrop,.end-confirm-backdrop,.end-pay-backdrop,.calendar-popup-backdrop,.sales-popup-backdrop,.client-detail-backdrop'))return;
+ if(endReminderBusy||endReminderActiveId||tab==='booking'||panel||document.querySelector('.member-shortage-backdrop,.member-charge-backdrop,.pass-purchase-backdrop,.pass-first-use-backdrop,.pass-first-result-backdrop,.end-confirm-backdrop,.end-pay-backdrop,.calendar-popup-backdrop,.sales-popup-backdrop,.client-detail-backdrop'))return;
  const booking=endedReservedBookings()[0];
  if(booking)openEndReminder(booking.id);
 }
@@ -1035,6 +1036,11 @@ function startQuickCompletion(id){
 }
 
 
+function checkPendingPassFirstUse(){
+ if(document.querySelector('.pass-first-use-backdrop,.pass-first-result-backdrop,.pass-purchase-backdrop,.member-shortage-backdrop,.end-confirm-backdrop,.end-pay-backdrop,.member-charge-backdrop'))return;
+ const pending=store.bookings.find(b=>b.status==='paid'&&specialKind(b.items)==='buy'&&!b.passFirstUseConfirmed);
+ if(pending)showPassFirstUsePrompt(pending.id);
+}
 function showPassFirstUsePrompt(id){
  const b=store.bookings.find(x=>x.id===id);
  if(!b||b.status!=='paid'||specialKind(b.items)!=='buy'||b.passFirstUseConfirmed)return;
@@ -1061,11 +1067,26 @@ function showPassFirstUsePrompt(id){
    actual.updatedAt=new Date().toISOString();
    save();
   }catch(e){store=JSON.parse(prev);completed=false;alert('사용 횟수를 저장하지 못했습니다. 다시 선택해 주세요.');return}
-  close();render();notify(useNow?'눈썹펌 1회 사용 · 잔여 4회':'눈썹펌 5회 적립 완료');
+  close();render();showPassFirstUseResult(actual.id,useNow);
  }
  function close(){dlg.remove();document.body.style.overflow=oldOverflow}
  dlg.querySelector('.pass-first-no').onclick=()=>finish(false);
  dlg.querySelector('.pass-first-yes').onclick=()=>finish(true);
+}
+
+function showPassFirstUseResult(id,usedNow){
+ const b=store.bookings.find(x=>x.id===id),client=b&&findClient(b.clientId);if(!client)return;
+ const remaining=browPassLedger(client).balance;
+ const dlg=document.createElement('div');dlg.className='pass-first-result-backdrop';
+ dlg.innerHTML='<section class="pass-first-result-dialog" role="dialog" aria-modal="true" aria-label="눈썹펌 횟수권 사용 결과">'+
+ '<h3>✓ 눈썹펌 5회권 저장 완료</h3><p>'+esc(client.name)+' · '+(usedNow?'이번 1회 사용 완료':'이번 사용 없음')+'</p>'+
+ '<div class="pass-first-result-counts"><div><span>구매</span><strong>5회</strong></div><div><span>이번 사용</span><strong class="brow-pass-red">'+(usedNow?'1회':'0회')+'</strong></div>'+
+ '<div><span>현재 잔여</span><strong class="brow-pass-blue">'+remaining+'회</strong></div></div>'+
+ '<div class="pass-first-result-dots">'+[5,4,3,2,1].map(n=>'<span class="'+(usedNow&&n===5?'used':'')+'">'+(usedNow&&n===5?'✓':n)+'</span>').join('')+'</div>'+
+ '<button type="button" class="pass-first-result-done">확인 · 달력으로</button></section>';
+ document.body.appendChild(dlg);
+ const prev=document.body.style.overflow;document.body.style.overflow='hidden';
+ dlg.querySelector('.pass-first-result-done').onclick=()=>{dlg.remove();document.body.style.overflow=prev;tab='calendar';render()};
 }
 
 function passPurchaseDialog(ctx){
@@ -1181,7 +1202,7 @@ function memberPaymentPrompt(context,onClose){
 }
 function commitCompletedBooking(ctx,deposit,paymentMethod){
  const {f,name,phone,old,client,available}=ctx;
- if(f.status==='paid'&&bookingEndIsFuture(f.date,f.end)){alert('시술 종료 전에는 완료 처리할 수 없습니다.');return false}
+ if(f.status==='paid'&&bookingEndIsFuture(f.date,f.end)&&!(ctx.earlyFinish&&bookingHasStarted(f.date,f.start))){alert('시술 종료 전에는 완료 처리할 수 없습니다.');return false}
  const items=checkedServices.map(id=>store.services.find(s=>s.id===id)).filter(Boolean).map(s=>clone(s));
  const kind=specialKind(items),passMethod=ctx.passMethod;
  if(f.status==='paid'&&kind==='use'&&browPassLedger(client).balance+(old?.status==='paid'&&old.clientId===client.id&&specialKind(old.items)==='use'?1:0)<1){alert('눈썹펌 5회권 잔여 횟수가 없습니다.');return false}
@@ -1200,6 +1221,7 @@ function commitCompletedBooking(ctx,deposit,paymentMethod){
    passPurchaseAmount:f.status==='paid'&&kind==='buy'?passPrice(passMethod):0,
    passFirstUse:f.status==='paid'&&kind==='buy'&&old?.status==='paid'&&specialKind(old.items)==='buy'?!!old.passFirstUse:false,
    passFirstUseConfirmed:f.status==='paid'&&kind==='buy'&&old?.status==='paid'&&specialKind(old.items)==='buy'?!!old.passFirstUseConfirmed:kind!=='buy',
+   actualCompletionAt:f.status==='paid'?(old?.actualCompletionAt||(ctx.earlyFinish?new Date().toISOString():null)):null,
    clientId:client.id,name,phone,date:f.date,start:f.start,end:f.end,items,extras:clone(extras),
    memberUse,status:f.status||'reserved',memo:f.memo||'',
    createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
@@ -1207,19 +1229,26 @@ function commitCompletedBooking(ctx,deposit,paymentMethod){
   save();
  }catch(e){store=JSON.parse(snapshot);alert('저장에 실패했습니다.');return false}
  const editingSavedId=editing||store.bookings[store.bookings.length-1].id;
- selected=f.date;cursor=dateOf(selected);tab='calendar';panel=null;editing=null;checkedServices=[];extras=[];tempForm=null;
+ selected=f.date;cursor=dateOf(selected);tab='calendar';panel=null;editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];tempForm=null;
  render();notify('예약 저장 완료');
  if(f.status==='paid'&&kind==='buy'&&!(old?.status==='paid'&&specialKind(old.items)==='buy'))setTimeout(()=>showPassFirstUsePrompt(editingSavedId),40);
  return true;
 }
 
+function requestEarlyCompletion(){
+ captureForm();const f=tempForm;
+ if(!f?.date||!f.start||!f.end){alert('시술 날짜와 시간을 확인해 주세요.');return}
+ if(!bookingHasStarted(f.date,f.start)){alert('시술 시작 전에는 완료할 수 없습니다.');return}
+ if(!confirm('실제로 시술을 마쳤습니까? 예약 종료 시간은 유지하고, 현재 시각을 실제 완료 시간으로 기록합니다.'))return;
+ earlyFinishAuthorized=true;const status=root.querySelector('#status');if(status)status.value='paid';submitBooking();
+}
 function submitBooking(){
  captureForm();const f=tempForm;
  const name=f.name?.trim(),phone=f.phone?.trim();
  if(!name||!phone){alert('고객 이름과 연락처를 입력하세요.');return}
  if(!f.date||!f.start||!f.end||mins(f.end)<=mins(f.start)){alert('시술일과 시작·종료 시간을 확인하세요.');return}
  if(!checkedServices.length){alert('시술을 1개 이상 선택하세요.');return}
- if(f.status==='paid'&&bookingEndIsFuture(f.date,f.end)){alert('아직 시술 종료 전입니다. 종료 시간 이후에 완료 처리할 수 있습니다. 지금은 예약 상태로 저장해 주세요.');return}
+ if(f.status==='paid'&&bookingEndIsFuture(f.date,f.end)&&!(earlyFinishAuthorized&&bookingHasStarted(f.date,f.start))){alert('아직 시술 종료 전입니다. 종료 시간 이후에 완료 처리할 수 있습니다. 지금은 예약 상태로 저장해 주세요.');return}
  const existing=store.clients.find(c=>c.name===name&&c.phone===phone);
  const client=existing||{id:uid(),name,phone,note:''};
  const collisions=store.bookings.filter(b=>b.id!==editing&&b.date===f.date&&b.status!=='cancelled'&&mins(f.start)<mins(b.end)&&mins(f.end)>mins(b.start));
@@ -1230,7 +1259,7 @@ function submitBooking(){
  const old=store.bookings.find(b=>b.id===editing);
  const available=Math.max(0,walletLedger(client).balance+(old?.status==='paid'&&old.clientId===client.id?Number(old.memberUse||0):0));
  const totalDue=normalDue(checkedServices.map(id=>store.services.find(s=>s.id===id)).filter(Boolean),extras);
- const ctx={f,name,phone,old,client,available,totalDue};
+ const ctx={f,name,phone,old,client,available,totalDue,earlyFinish:earlyFinishAuthorized&&bookingEndIsFuture(f.date,f.end)};
  const currentMethod=root.querySelector('#payCard')?.checked?'card':root.querySelector('#payCash')?.checked?'cash':null;
  const special=specialKind(checkedServices.map(id=>({id})));
  if(special==='buy'&&f.status==='paid'){passPurchaseDialog({...ctx,passMethod:old?.passPaymentMethod||currentMethod});return}
@@ -1246,7 +1275,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=068',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=069',{updateViaCache:'none'}).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
