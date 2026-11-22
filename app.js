@@ -2,7 +2,7 @@
 const KEY='snailbook_v1_store';
 const base={clients:[],services:[{id:'s1',name:'젤네일',price:50000,minutes:60},{id:'s2',name:'젤 제거',price:10000,minutes:30},{id:'s3',name:'네일아트',price:70000,minutes:90},{id:'s4',name:'기본 케어',price:30000,minutes:45}],bookings:[],settings:{open:'10:00',close:'20:00',interval:30,closedDays:[0]}};
 function clone(o){return JSON.parse(JSON.stringify(o))}function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.bookings)&&Array.isArray(x.clients)&&Array.isArray(x.services))return {...clone(base),...x,settings:{...base.settings,...x.settings}}}catch(e){}return clone(base)}
-let store=load(),tab='calendar',view='month',cursor=new Date(),selected=localDate(new Date()),panel=null,editing=null,checkedServices=[],extras=[],search='',toastTimer,treatmentGender=null,treatmentCategory=null;
+let store=load(),tab='calendar',view='month',cursor=new Date(),selected=localDate(new Date()),panel=null,editing=null,checkedServices=[],extras=[],search='',toastTimer,treatmentGender=null,treatmentCategory=null,settingsGender=null,settingsCategory=null;
 const root=document.getElementById('app');const w=['일','월','화','수','목','금','토'];
 function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function localDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
@@ -357,8 +357,141 @@ function bindReceiptSwipes(){
 function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자의 Google 계정으로 연결할 예정입니다. 연결 기능은 현재 미구현 상태입니다.');if(panel==='reset')return simplePanel('초기화',`<p>모든 예약, 고객, 서비스와 설정을 초기화합니다.</p><button class="danger" data-reset="1">전체 데이터 초기화</button>`);const entries=[['google','icons/settings/google.png','Google 캘린더 연동'],['services','💅','서비스 가격'],['hours','🕒','예약 시간 설정'],['client','👥','고객 관리'],['backup','icons/settings/backup.png','백업 내보내기·가져오기'],['reset','icons/settings/reset.png','초기화']];return `<div class="wrap">${entries.map(([id,ic,label])=>`<button class="setting-row" data-panel="${id}"><span class="emoji">${ic.startsWith("icons/")?`<img src="${ic}" alt="">`:ic}</span><span>${label}</span><span class="arrow">›</span></button>`).join('')}</div>`}
 function panelHead(s){return `<div class="menu-head"><button data-back="1">‹</button><strong>${s}</strong></div>`}function simplePanel(title,content){return `<div class="wrap">${panelHead(title)}<div class="card">${content}</div></div>`}
 function formatDuration(n){const h=Math.floor(n/60),m=n%60;return h?(h+'시간'+(m?' '+m+'분':'')):(m+'분')}
-function servicesPage(){return `<div class="wrap">${panelHead('서비스 가격')}<p class="muted">시술별 금액과 예상 소요 시간을 설정해 예약 등록 시 자동 적용합니다.</p><div class="card service-table"><div class="service-head"><span>서비스</span><span>가격 (원)</span><span>시간 (분)</span><span></span></div>${store.services.map(s=>`<div class="service-field"><input aria-label="서비스명 직접 입력" data-s-name="${s.id}" value="${esc(s.name)}"><button type="button" class="service-picker" data-wheel-kind="price" data-wheel-id="${s.id}" data-s-price="${s.id}">${Number(s.price).toLocaleString('ko-KR')}</button><button type="button" class="service-picker" data-wheel-kind="time" data-wheel-id="${s.id}" data-s-min="${s.id}">${formatDuration(Number(s.minutes))}</button><button class="danger" data-delete-s="${s.id}" aria-label="서비스 삭제">×</button></div>`).join('')}<button class="secondary" data-add-service="1">+ 서비스 추가</button></div><button class="primary" data-save-services="1">서비스 가격 저장</button></div>`}
 
+function servicesPage(){
+ return '<div class="wrap">'+panelHead('서비스 가격')+
+ '<p class="muted">여자·남자와 시술 종류를 선택한 뒤 서비스 휠에서 추가·수정·삭제하세요.</p>'+
+ '<div class="card service-manager">'+
+ '<div class="treatment-genders">'+[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>
+ '<button type="button" class="treatment-gender '+(settingsGender===g?'active':'')+'" data-setting-gender="'+g+'">'+label+'<span>'+(settingsGender===g?'⌃':'⌄')+'</span></button>').join('')+'</div>'+
+ (settingsGender?'<div class="treatment-category-list">'+TREATMENT_CATEGORIES.map(cat=>{
+  const count=store.services.filter(s=>s.gender===settingsGender&&s.category===cat).length;
+  return '<button type="button" class="treatment-category" data-setting-category="'+esc(cat)+'"><span>'+cat+'</span><span>'+count+'개 ›</span></button>';
+ }).join('')+'</div>':'')+
+ '</div></div>';
+}
+function openSettingsServiceWheel(){
+ const gender=settingsGender,category=settingsCategory;
+ if(!gender||!category)return;
+ const options=store.services.filter(s=>s.gender===gender&&s.category===category);
+ const back=document.createElement('div');
+ back.className='wheel-backdrop settings-service-backdrop';
+ back.innerHTML='<section class="wheel-sheet settings-service-sheet" role="dialog" aria-modal="true" aria-label="서비스 관리">'+
+ '<div class="treatment-heading">'+(gender==='W'?'여자':'남자')+' · '+esc(category)+'</div>'+
+ '<div class="wheel-frame"><div class="wheel-highlight"></div><div class="wheel-col settings-service-col"><div class="wheel-pad"></div>'+
+ options.map((s,i)=>'<div class="wheel-option settings-service-option" data-service-index="'+i+'">'+esc(s.name)+'</div>').join('')+
+ '<div class="wheel-option settings-service-option settings-service-new" hidden><input id="newServiceName" autocomplete="off" placeholder="새 서비스 이름" maxlength="70"></div>'+
+ '<div class="wheel-pad"></div></div></div>'+
+ '<div class="settings-service-meta"></div>'+
+ '<div class="settings-service-actions"><button type="button" class="settings-service-remove" aria-label="선택 서비스 삭제">−</button><button type="button" class="settings-service-add">+</button></div>'+
+ '<div class="wheel-actions"><button type="button" class="wheel-cancel">취소</button><button type="button" class="wheel-done" aria-label="서비스 가격 수정">✓</button></div></section>';
+ document.body.appendChild(back);
+ const y=window.scrollY,prior={position:document.body.style.position,top:document.body.style.top,left:document.body.style.left,right:document.body.style.right,width:document.body.style.width};
+ Object.assign(document.body.style,{position:'fixed',top:'-'+y+'px',left:'0',right:'0',width:'100%'});
+ const col=back.querySelector('.settings-service-col'),newRow=back.querySelector('.settings-service-new'),input=back.querySelector('#newServiceName'),meta=back.querySelector('.settings-service-meta'),add=back.querySelector('.settings-service-add'),remove=back.querySelector('.settings-service-remove'),done=back.querySelector('.wheel-done');
+ let adding=false,idx=0,settle;
+ const close=()=>{clearTimeout(settle);back.remove();Object.assign(document.body.style,prior);window.scrollTo(0,y)};
+ back.addEventListener('touchmove',e=>{if(!e.target.closest('.settings-service-col')&&!e.target.closest('input'))e.preventDefault()},{passive:false});
+ function currentIndex(){return Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/44)))}
+ function refresh(){
+  if(adding){meta.textContent='서비스 이름 입력 후 저장하세요';add.textContent='저장';remove.disabled=true;done.disabled=true;return}
+  idx=currentIndex();const s=options[idx];
+  meta.textContent=s?money(s.price)+' · '+Number(s.minutes||0)+'분':'등록된 서비스 없음';
+  add.textContent='+';remove.disabled=!s;done.disabled=!s;
+ }
+ function beginAdd(){
+  adding=true;newRow.hidden=false;input.value='';col.style.scrollSnapType='none';
+  requestAnimationFrame(()=>{col.scrollTop=options.length*44;input.focus();refresh()});
+ }
+ function finishAdd(){
+  const name=input.value.trim();if(!name){alert('서비스 이름을 입력해 주세요.');input.focus();return}
+  if(store.services.some(s=>s.gender===gender&&s.category===category&&s.name===name)){
+   alert('같은 분류에 이미 등록된 서비스입니다.');input.focus();return;
+  }
+  const draft={id:uid(),name,gender,category,price:0,minutes:60};
+  close();
+  editServicePriceAndTime(draft,true);
+ }
+ col.addEventListener('scroll',()=>{if(adding)return;refresh();clearTimeout(settle);settle=setTimeout(()=>{if(col.isConnected&&!adding)col.scrollTo({top:currentIndex()*44,behavior:'smooth'})},110)},{passive:true});
+ col.addEventListener('click',e=>{
+  if(adding)return;
+  const item=e.target.closest('[data-service-index]');if(!item)return;
+  const target=Number(item.dataset.serviceIndex);
+  if(target!==currentIndex()){col.scrollTo({top:target*44,behavior:'smooth'});return}
+  const s=options[target];if(!s)return;close();editServicePriceAndTime(s,false);
+ });
+ add.onclick=()=>{if(adding)finishAdd();else beginAdd()};
+ input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();finishAdd()}});
+ remove.onclick=()=>{
+  if(adding)return;
+  const s=options[currentIndex()];if(!s)return;
+  if(!confirm('서비스 "'+s.name+'"을 삭제할까요?\n이미 저장된 예약 기록은 그대로 유지됩니다.'))return;
+  store.services=store.services.filter(x=>x.id!==s.id);save();close();render();notify('서비스 삭제 완료');
+  openSettingsServiceWheel();
+ };
+ done.onclick=()=>{
+  if(adding)return;const s=options[currentIndex()];if(!s)return;
+  close();editServicePriceAndTime(s,false);
+ };
+ back.querySelector('.wheel-cancel').onclick=close;
+ back.addEventListener('click',e=>{if(e.target===back)close()});
+ requestAnimationFrame(refresh);
+}
+function editServicePriceAndTime(item,isNew){
+ const draft={...item};
+ openManagerNumberWheel('price',draft.price,n=>{
+  draft.price=n;
+  openManagerNumberWheel('time',draft.minutes,minutes=>{
+   draft.minutes=minutes;
+   if(isNew)store.services.push(draft);
+   else{const old=store.services.find(s=>s.id===draft.id);if(!old)return;old.price=draft.price;old.minutes=draft.minutes}
+   save();render();notify(isNew?'새 서비스 등록 완료':'서비스 가격·시간 저장 완료');
+   openSettingsServiceWheel();
+  },()=>openSettingsServiceWheel());
+ },()=>openSettingsServiceWheel());
+}
+function openManagerNumberWheel(kind,current,onDone,onCancel){
+ const price=kind==='price';
+ const aValues=Array.from({length:price?51:13},(_,i)=>i);
+ const bValues=Array.from({length:price?10:6},(_,i)=>price?i*1000:i*10);
+ const initialA=price?Math.min(50,Math.floor(current/10000)):Math.min(12,Math.floor(current/60));
+ const initialB=price?Math.min(9,Math.round((current%10000)/1000))*1000:Math.min(50,Math.round((current%60)/10)*10);
+ const back=document.createElement('div');back.className='wheel-backdrop settings-number-backdrop';
+ const col=(key,values,unit)=>'<div class="wheel-col" data-manager-col="'+key+'"><div class="wheel-pad"></div>'+values.map(v=>'<div class="wheel-option" data-manager-value="'+v+'">'+(key==='a'?String(v).padStart(2,'0'):String(price?v/1000:v).padStart(2,'0'))+'</div>').join('')+'<div class="wheel-pad"></div></div>';
+ back.innerHTML='<section class="wheel-sheet settings-service-sheet" role="dialog" aria-modal="true" aria-label="'+(price?'가격':'시술 시간')+' 설정">'+
+ '<div class="treatment-heading">'+(price?'가격 설정 · 만원 / 천원':'시술 시간 설정 · 시간 / 분')+'</div>'+
+ '<div class="wheel-frame"><div class="wheel-highlight"></div>'+col('a',aValues)+col('b',bValues)+'</div>'+
+ '<div class="settings-number-current"></div><div class="wheel-actions"><button class="wheel-cancel" type="button">취소</button><button class="wheel-done" type="button" aria-label="선택한 값 저장">✓</button></div></section>';
+ document.body.appendChild(back);
+ const y=window.scrollY,prior={position:document.body.style.position,top:document.body.style.top,left:document.body.style.left,right:document.body.style.right,width:document.body.style.width};
+ Object.assign(document.body.style,{position:'fixed',top:'-'+y+'px',left:'0',right:'0',width:'100%'});
+ const cols=[...back.querySelectorAll('[data-manager-col]')],pairs=[aValues,bValues],selected=[initialA,initialB];
+ const close=()=>{back.remove();Object.assign(document.body.style,prior);window.scrollTo(0,y)};
+ back.addEventListener('touchmove',e=>{if(!e.target.closest('.wheel-col'))e.preventDefault()},{passive:false});
+ function values(){return price?selected[0]*10000+selected[1]:selected[0]*60+selected[1]}
+ function update(){back.querySelector('.settings-number-current').textContent=price?money(values()):values()+'분'}
+ cols.forEach((column,i)=>{
+  const valuesList=pairs[i];let stop;
+  column.addEventListener('scroll',()=>{
+   const n=Math.max(0,Math.min(valuesList.length-1,Math.round(column.scrollTop/44)));
+   selected[i]=valuesList[n];update();clearTimeout(stop);
+   stop=setTimeout(()=>{if(column.isConnected)column.scrollTo({top:n*44,behavior:'smooth'})},115);
+  },{passive:true});
+  column.addEventListener('click',e=>{
+   const el=e.target.closest('[data-manager-value]');if(!el)return;
+   const index=valuesList.indexOf(Number(el.dataset.managerValue));
+   if(index>=0)column.scrollTo({top:index*44,behavior:'smooth'});
+  });
+ });
+ requestAnimationFrame(()=>{cols[0].scrollTop=aValues.indexOf(initialA)*44;cols[1].scrollTop=Math.max(0,bValues.indexOf(initialB))*44;update()});
+ back.querySelector('.wheel-done').onclick=()=>{
+  cols.forEach((c,i)=>selected[i]=pairs[i][Math.max(0,Math.min(pairs[i].length-1,Math.round(c.scrollTop/44)))]);
+  const n=values();if(!price&&n<10){alert('시술 시간은 최소 10분입니다.');return}
+  close();onDone(n);
+ };
+ back.querySelector('.wheel-cancel').onclick=()=>{close();onCancel()};
+ back.addEventListener('click',e=>{if(e.target===back){close();onCancel()}});
+}
 
 function recalcTreatmentEnd(){
   if(!tempForm||editing)return;
@@ -587,7 +720,8 @@ function backupPage(){return `<div class="wrap">${panelHead('백업 내보내기
 function bind(){bindReceiptSwipes();root.querySelectorAll('[data-tab]').forEach(e=>e.onclick=()=>{tab=e.dataset.tab;panel=null;editing=null;checkedServices=[];extras=[];render()});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel=visibleBookings(selected).length?'appointments':null;render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelectorAll('[data-treatment-gender]').forEach(el=>el.onclick=()=>{captureForm();const g=el.dataset.treatmentGender;treatmentGender=treatmentGender===g?null:g;treatmentCategory=null;render();restoreForm()});
 root.querySelectorAll('[data-treatment-category]').forEach(el=>el.onclick=()=>{captureForm();treatmentCategory=el.dataset.treatmentCategory;render();restoreForm();openTreatmentWheel()});root.querySelectorAll('[data-treatment-remove]').forEach(e=>e.onclick=()=>{captureForm();checkedServices=checkedServices.filter(id=>id!==e.dataset.treatmentRemove);recalcTreatmentEnd();render();restoreForm()});root.querySelectorAll('[data-add-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.push({name:'',amount:0});render();restoreForm()});root.querySelectorAll('[data-remove-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.splice(+e.dataset.removeExtra,1);render();restoreForm()});const payCard=root.querySelector('#payCard'),payCash=root.querySelector('#payCash');
 if(payCard&&payCash){payCard.onchange=()=>{if(payCard.checked)payCash.checked=false};payCash.onchange=()=>{if(payCash.checked)payCard.checked=false}}
-root.querySelectorAll('[data-save-booking]').forEach(e=>e.onclick=submitBooking);root.querySelectorAll('[data-delete-booking]').forEach(e=>e.onclick=()=>{if(confirm('이 예약을 삭제할까요?')){store.bookings=store.bookings.filter(b=>b.id!==e.dataset.deleteBooking);save();editing=null;tab='calendar';render();notify('예약 삭제 완료')}});root.querySelectorAll('[data-sales-period]').forEach(e=>e.onclick=()=>{panel=e.dataset.salesPeriod;render()});root.querySelectorAll('[data-sales-move]').forEach(e=>e.onclick=()=>{const period=panel==='week'?'week':panel==='year'?'year':'month',n=+e.dataset.salesMove;if(period==='week')selected=shift(selected,n*7);else if(period==='year')cursor=new Date(cursor.getFullYear()+n,cursor.getMonth(),1);else cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);render()});root.querySelectorAll('[data-wheel-kind]').forEach(e=>e.onclick=()=>openServiceWheel(e.dataset.wheelId,e.dataset.wheelKind));root.querySelector('[data-add-service]')?.addEventListener('click',()=>{readServices();store.services.push({id:uid(),name:'새 서비스',price:0,minutes:60});render()});root.querySelectorAll('[data-delete-s]').forEach(e=>e.onclick=()=>{readServices();store.services=store.services.filter(s=>s.id!==e.dataset.deleteS);render()});root.querySelector('[data-save-services]')?.addEventListener('click',()=>{readServices();save();render();notify('서비스 저장 완료')});root.querySelector('[data-open-closed-wheel]')?.addEventListener('click',openClosedDaysWheel);root.querySelector('[data-save-hours]')?.addEventListener('click',()=>{store.settings={open:val('open'),close:val('close'),interval:+val('interval'),closedDays:[...root.querySelectorAll('[data-closed-day]:checked')].map(e=>+e.dataset.closedDay)};if(mins(store.settings.open)>=mins(store.settings.close)){alert('영업 종료는 시작보다 늦어야 합니다.');return}save();notify('예약 시간 저장 완료')});root.querySelector('[data-add-client]')?.addEventListener('click',addClient);root.querySelectorAll('[data-client-detail]').forEach(e=>e.onclick=()=>openClientDetail(e.dataset.clientDetail));root.querySelector('[data-export]')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({app:'SNAIL_BOOK',version:1,exportedAt:new Date().toISOString(),data:store},null,2)],{type:'application/json'});let a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download='SNAIL_BOOK_backup_'+localDate(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),500)});root.querySelector('#importFile')?.addEventListener('change',async e=>{let file=e.target.files[0];if(!file)return;try{const x=JSON.parse(await file.text());if(x.app!=='SNAIL_BOOK'||!x.data||!Array.isArray(x.data.clients)||!Array.isArray(x.data.bookings)||!Array.isArray(x.data.services))throw Error('형식 오류');if(!confirm('현재 모든 데이터를 백업 파일로 교체할까요?'))return;store=x.data;save();render();notify('복원 완료')}catch(err){alert('S’NAIL BOOK 백업 파일이 아닙니다.')}});root.querySelector('[data-reset]')?.addEventListener('click',()=>{if(confirm('정말 전체 데이터를 초기화할까요? 복구할 수 없습니다.')&&confirm('한 번 더 확인합니다. 전체 삭제할까요?')){store=clone(base);save();panel=null;render();notify('초기화 완료')}})}
+root.querySelectorAll('[data-save-booking]').forEach(e=>e.onclick=submitBooking);root.querySelectorAll('[data-delete-booking]').forEach(e=>e.onclick=()=>{if(confirm('이 예약을 삭제할까요?')){store.bookings=store.bookings.filter(b=>b.id!==e.dataset.deleteBooking);save();editing=null;tab='calendar';render();notify('예약 삭제 완료')}});root.querySelectorAll('[data-sales-period]').forEach(e=>e.onclick=()=>{panel=e.dataset.salesPeriod;render()});root.querySelectorAll('[data-sales-move]').forEach(e=>e.onclick=()=>{const period=panel==='week'?'week':panel==='year'?'year':'month',n=+e.dataset.salesMove;if(period==='week')selected=shift(selected,n*7);else if(period==='year')cursor=new Date(cursor.getFullYear()+n,cursor.getMonth(),1);else cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);render()});root.querySelectorAll('[data-setting-gender]').forEach(e=>e.onclick=()=>{settingsGender=settingsGender===e.dataset.settingGender?null:e.dataset.settingGender;settingsCategory=null;render()});
+root.querySelectorAll('[data-setting-category]').forEach(e=>e.onclick=()=>{settingsCategory=e.dataset.settingCategory;openSettingsServiceWheel()});root.querySelector('[data-open-closed-wheel]')?.addEventListener('click',openClosedDaysWheel);root.querySelector('[data-save-hours]')?.addEventListener('click',()=>{store.settings={open:val('open'),close:val('close'),interval:+val('interval'),closedDays:[...root.querySelectorAll('[data-closed-day]:checked')].map(e=>+e.dataset.closedDay)};if(mins(store.settings.open)>=mins(store.settings.close)){alert('영업 종료는 시작보다 늦어야 합니다.');return}save();notify('예약 시간 저장 완료')});root.querySelector('[data-add-client]')?.addEventListener('click',addClient);root.querySelectorAll('[data-client-detail]').forEach(e=>e.onclick=()=>openClientDetail(e.dataset.clientDetail));root.querySelector('[data-export]')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({app:'SNAIL_BOOK',version:1,exportedAt:new Date().toISOString(),data:store},null,2)],{type:'application/json'});let a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download='SNAIL_BOOK_backup_'+localDate(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),500)});root.querySelector('#importFile')?.addEventListener('change',async e=>{let file=e.target.files[0];if(!file)return;try{const x=JSON.parse(await file.text());if(x.app!=='SNAIL_BOOK'||!x.data||!Array.isArray(x.data.clients)||!Array.isArray(x.data.bookings)||!Array.isArray(x.data.services))throw Error('형식 오류');if(!confirm('현재 모든 데이터를 백업 파일로 교체할까요?'))return;store=x.data;save();render();notify('복원 완료')}catch(err){alert('S’NAIL BOOK 백업 파일이 아닙니다.')}});root.querySelector('[data-reset]')?.addEventListener('click',()=>{if(confirm('정말 전체 데이터를 초기화할까요? 복구할 수 없습니다.')&&confirm('한 번 더 확인합니다. 전체 삭제할까요?')){store=clone(base);save();panel=null;render();notify('초기화 완료')}})}
 function bindSearchResults(){root.querySelectorAll('#searchResults [data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()})}
 let tempForm=null;function captureForm(){if(tab!=='booking')return;tempForm={};['name','phone','date','start','end','status','memo','memberUse','payCard','payCash'].forEach(k=>{let e=root.querySelector('#'+k);if(e)tempForm[k]=e.type==='checkbox'?e.checked:e.value});extras=extras.map((x,i)=>({name:root.querySelector(`[data-extra-name="${i}"]`)?.value||'',amount:Number(root.querySelector(`[data-extra-amount="${i}"]`)?.value||0)}))}
 function restoreForm(){if(!tempForm)return;Object.entries(tempForm).forEach(([k,v])=>{let e=root.querySelector('#'+k);if(e){if(e.type==='checkbox')e.checked=!!v;else e.value=v}});tempForm=null}
