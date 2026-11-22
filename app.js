@@ -174,8 +174,10 @@ function browPassLedger(client){
 }
 function ensureSpecialCatalog(){
  if(store.catalogSeedVersion>=3)return;
- const male=store.services.find(s=>s.id==='menu-m-nail-care');
+ const male=store.services.find(s=>s.id==='menu-m-nail-care')||store.services.find(s=>s.gender==='M'&&s.category==='네일'&&s.name==='케어'&&Number(s.price)===30000);
  if(male&&male.name==='케어')male.name='맨즈 케어';
+ if(!male&&!store.services.some(s=>s.gender==='M'&&s.category==='네일'&&s.name==='맨즈 케어'))
+  store.services.push({id:'menu-m-nail-care',name:'맨즈 케어',gender:'M',category:'네일',price:30000,minutes:60});
  for(const gender of ['W','M']){
   if(!store.services.some(s=>s.gender===gender&&s.category==='네일'&&s.name==='풀글리터'))
    store.services.push({id:'menu-'+gender.toLowerCase()+'-nail-glitter',name:'풀글리터',gender,category:'네일',price:55000,minutes:60});
@@ -958,6 +960,7 @@ function quickCompleteBooking(id,deposit,method){
  const credit=deposit?Number(deposit.creditedAmount||0):0;
  const special=specialKind(b.items);
  if(special==='use'&&(!client||browPassLedger(client).balance<1)){alert('눈썹펌 횟수권 잔여 횟수가 없습니다. 구매를 먼저 등록해 주세요.');return false}
+ if(special==='buy'&&((b.items||[]).length!==1||(b.extras||[]).some(e=>Number(e.amount||0)!==0))){alert('눈썹펌 5회권 구매는 단독 예약으로 등록해 주세요.');return false}
  if(special==='buy'&&method!=='cash'){alert('눈썹펌 5회권 현금가 결제는 현금을 선택해 주세요.');return false}
  const memberUse=special==='buy'?0:Math.min(totalDue,available+credit);
  const remainder=totalDue-memberUse;
@@ -988,7 +991,7 @@ function showQuickPaymentMethod(id){
  '<h3>시술 완료 · 결제 수단</h3>'+
  '<p>시술 금액 <strong>'+money(priceFor(b))+'</strong></p>'+
  '<div class="end-pay-methods"><button type="button" data-quick-method="cash" aria-pressed="false">현금</button>'+
- '<button type="button" data-quick-method="card" aria-pressed="false">카드</button></div>'+
+ '<button type="button" data-quick-method="card" '+(specialKind(b.items)==='buy'?'disabled title="5회권 현금가 전용"':'')+' aria-pressed="false">카드</button></div>'+
  '<div class="end-pay-actions"><button type="button" class="end-pay-cancel">취소</button>'+
  '<button type="button" class="end-pay-save" disabled>결제·완료 저장</button></div></section>';
  document.body.appendChild(dlg);
@@ -1158,7 +1161,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=063',{updateViaCache:'none'}).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=064',{updateViaCache:'none'}).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
