@@ -604,3 +604,7 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .pass-first-result-dots span{border:1.5px solid #347cf5;color:#2876e9;background:#edf3ff;border-radius:50%;width:39px;height:39px;display:flex;align-items:center;justify-content:center;font-weight:800}
 .pass-first-result-dots span.used{color:#ce3850;border-color:#e4a9b3;background:#fceef2}
 .pass-first-result-done{width:100%;min-height:52px;background:#347cf5;color:white;border:0;border-radius:13px;font-size:17px;font-weight:800}
+
+/* v0.7.0: status-adjacent early completion button and version check */
+.app-version-label{font-size:12px;color:#9299a7;font-weight:600;vertical-align:middle;margin-left:6px}
+.early-complete-button{margin:8px 0 20px;min-height:50px}
