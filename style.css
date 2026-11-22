@@ -443,3 +443,30 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .receipt-row-date{display:block;color:#626b7c;font-size:12px;margin-top:4px}
 .receipt-swipe-main>span{min-width:0;flex:1}
 .receipt-swipe-main b{white-space:nowrap}
+
+/* v0.5.6: prepaid membership shortage dialog */
+.payment-method-block[hidden]{display:none!important}
+.member-shortage-backdrop{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.58);overscroll-behavior:contain}
+.member-shortage-panel{background:#fff;color:#232630;border-radius:22px;padding:22px 18px;width:min(100%,480px);max-height:85dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 18px 65px #0004}
+.member-shortage-panel h3{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;font-size:19px;margin:0 0 18px}
+.shortage-warning{display:inline-flex;align-items:center;justify-content:center;flex:0 0 26px;height:26px;border-radius:50%;background:#d83a50;color:white;font-weight:900;font-size:19px}
+.shortage-figures{background:#f5f6fa;border-radius:13px;padding:13px 14px;margin-bottom:15px}
+.shortage-figures>div,.shortage-preview>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;font-size:14px}
+.shortage-figures span,.shortage-preview span{color:#717585}
+.shortage-red{color:#dc3c51!important}.shortage-blue{color:#3178ef!important}
+.shortage-modes{display:grid;gap:10px;margin-bottom:15px}
+.shortage-modes label{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:650}
+.shortage-modes input{accent-color:#347bff;width:19px;height:19px}
+.shortage-plans>strong,.shortage-methods>strong{font-size:14px;display:block;margin:9px 0}
+.shortage-plan-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.shortage-method-options{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.shortage-plan-options label,.shortage-method-options label{position:relative;min-width:0}
+.shortage-plan-options input,.shortage-method-options input{position:absolute;opacity:0}
+.shortage-plan-options span,.shortage-method-options span{display:block;text-align:center;padding:11px 2px;border:1px solid #cdd4df;border-radius:10px;font-size:13px;font-weight:700}
+.shortage-plan-options input:checked+span,.shortage-method-options input:checked+span{border-color:#347bff;background:#e9f1ff;color:#1a71e9}
+.shortage-preview{margin:15px 0;background:#f4f6fa;border-radius:12px;padding:12px}
+.shortage-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:9px}
+.shortage-actions button{min-height:48px;border:0;border-radius:12px;font-weight:750}
+.shortage-cancel{background:#eef0f4;color:#505568}
+.shortage-confirm{background:#317eff;color:#fff}
+.shortage-confirm:disabled{opacity:.38}
