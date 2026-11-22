@@ -589,3 +589,18 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .pass-first-use-actions button{min-height:53px;border:0;border-radius:13px;font-weight:750;font-size:16px}
 .pass-first-no{background:#eef0f4;color:#404956}
 .pass-first-yes{background:#327cf5;color:#fff}
+
+/* v0.6.9 early completion and first-use result */
+.early-complete-button{display:block;width:100%;min-height:54px;margin:10px 0;border-radius:13px;border:1.5px solid #347cf5;background:#e7efff;color:#2876e9;font-weight:800;font-size:17px}
+.pass-first-result-backdrop{position:fixed;inset:0;z-index:270;background:rgba(0,0,0,.62);display:flex;justify-content:center;align-items:center;padding:16px}
+.pass-first-result-dialog{width:min(100%,430px);border-radius:22px;background:#fff;color:#242836;padding:24px 18px;box-sizing:border-box;text-align:center}
+.pass-first-result-dialog h3{font-size:20px;margin:0 0 8px}
+.pass-first-result-dialog>p{color:#757d89;margin:0 0 18px;font-size:14px}
+.pass-first-result-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:19px}
+.pass-first-result-counts>div{background:#f3f5f9;border-radius:13px;padding:13px 5px}
+.pass-first-result-counts span{display:block;color:#7b8190;font-size:13px}
+.pass-first-result-counts strong{display:block;font-size:22px;margin-top:8px}
+.pass-first-result-dots{display:flex;justify-content:center;gap:9px;margin-bottom:22px}
+.pass-first-result-dots span{border:1.5px solid #347cf5;color:#2876e9;background:#edf3ff;border-radius:50%;width:39px;height:39px;display:flex;align-items:center;justify-content:center;font-weight:800}
+.pass-first-result-dots span.used{color:#ce3850;border-color:#e4a9b3;background:#fceef2}
+.pass-first-result-done{width:100%;min-height:52px;background:#347cf5;color:white;border:0;border-radius:13px;font-size:17px;font-weight:800}
