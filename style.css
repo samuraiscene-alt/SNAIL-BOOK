@@ -310,3 +310,11 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .payment-switch-option input:checked+.payment-switch-track:after{transform:translateX(17px)}
 .payment-switch-option input:focus-visible+.payment-switch-track{outline:2px solid #087aff;outline-offset:3px}
 .payment-note{color:#8c8e99;font-size:12px;margin:10px 0 0}
+
+/* v0.4.2 receipt and service-performance separation */
+.receipts-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0 12px}
+.receipts-split>div{background:#f4f6fa;border-radius:12px;min-width:0;padding:13px 10px}
+.receipts-split small{display:block;color:#717786;font-size:13px;margin-bottom:5px}
+.receipts-split strong{display:block;color:#242b37;font-size:18px;font-weight:750;overflow-wrap:anywhere}
+.receipts-unknown{color:#b56e10;background:#fff5e4;padding:10px;border-radius:9px;font-size:12px;line-height:1.45}
+.receipt-detail{justify-content:space-between;align-items:center}
