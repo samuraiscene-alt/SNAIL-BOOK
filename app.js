@@ -206,9 +206,84 @@ function salesPage(){
  (Object.entries(groups).sort((a,b)=>b[1].reduce((n,r)=>n+r.amount,0)-a[1].reduce((n,r)=>n+r.amount,0)).map(([id,rows])=>
  '<details class="accordion"><summary><span>'+esc(findClient(id)?.name||rows[0].name||'고객')+'</span><span>'+money(rows.reduce((n,r)=>n+r.amount,0))+' · '+rows.length+'건 ⌄</span></summary>'+
  rows.sort((a,b)=>b.date.localeCompare(a.date)).map(r=>
- '<div class="detail-row receipt-detail"><span>'+esc(r.date)+'<div class="sub">'+esc(r.service)+' · '+(r.method==='card'?'카드':r.method==='cash'?'현금':'결제 수단 미확인')+'</div></span><b>'+money(r.amount)+'</b></div>'
+ '<div class="receipt-swipe" data-receipt-kind="'+r.kind+'" data-receipt-id="'+esc(r.id)+'" data-receipt-client="'+esc(r.clientId)+'">'+
+ '<button type="button" class="receipt-swipe-delete" data-delete-receipt="1" aria-label="수령 내역 삭제">삭제</button>'+
+ '<div class="receipt-swipe-content"><button type="button" class="receipt-swipe-main" data-edit-receipt="1"><span>'+esc(r.date)+'<span class="sub">'+esc(r.service)+' · '+(r.method==='card'?'카드':r.method==='cash'?'현금':'결제 수단 미확인')+'</span></span><b>'+money(r.amount)+'</b></button></div></div>'
  ).join('')+'</details>').join('')||'<div class="empty">해당 기간 실제 수령 기록이 없습니다.</div>')+
  '</div>';
+}
+
+function deleteReceipt(kind,id,clientId){
+ if(kind==='deposit'){
+  const client=findClient(clientId);
+  const deposits=client?.walletDeposits;
+  const record=deposits?.find(d=>String(d.id)===String(id));
+  if(!record)return;
+  const amount=Number(record.amount)||0;
+  const ledger=walletLedger(client);
+  if(ledger.balance-amount<0){alert('이 충전액은 이미 회원권 시술에 사용되어 삭제할 수 없습니다. 사용 내역부터 확인해 주세요.');return}
+  if(!confirm(client.name+'님의 회원권 충전 '+money(amount)+'을 삭제할까요?\n충전 기록과 수령액이 삭제되며 회원권 잔액도 줄어듭니다.'))return;
+  client.walletDeposits=deposits.filter(d=>String(d.id)!==String(id));
+ }else if(kind==='booking'){
+  const b=store.bookings.find(b=>String(b.id)===String(id));
+  if(!b)return;
+  if(!confirm(clientName(b)+'님의 '+b.date+' 시술 예약 전체를 삭제할까요?\n수령 내역뿐 아니라 예약·시술 기록도 삭제됩니다.'))return;
+  store.bookings=store.bookings.filter(x=>String(x.id)!==String(id));
+ }else return;
+ save();render();notify('수령 내역 삭제 완료');
+}
+function openReceipt(kind,id,clientId){
+ if(kind==='booking'){
+  const b=store.bookings.find(b=>String(b.id)===String(id));
+  if(!b)return;
+  editing=b.id;checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);
+  tab='booking';panel=null;render();
+ }else if(kind==='deposit'){
+  const client=findClient(clientId),d=client?.walletDeposits?.find(x=>String(x.id)===String(id));
+  if(!d)return;
+  alert('회원권 충전 기록은 현재 수정 기능이 없습니다. 잘못 충전한 내역은 왼쪽으로 밀어 삭제할 수 있습니다. 단, 이미 사용한 충전액은 보호됩니다.');
+ }
+}
+function bindReceiptSwipes(){
+ const rows=[...root.querySelectorAll('.receipt-swipe')];
+ let opened=null;
+ rows.forEach(row=>{
+  const content=row.querySelector('.receipt-swipe-content'),main=row.querySelector('[data-edit-receipt]'),remove=row.querySelector('[data-delete-receipt]');
+  const kind=row.dataset.receiptKind,id=row.dataset.receiptId,clientId=row.dataset.receiptClient;
+  let startX=0,startY=0,startOffset=0,tracking=false,axis=null,suppressClick=false;
+  function setOpen(on){row.classList.toggle('is-open',on);if(on){if(opened&&opened!==row)opened.classList.remove('is-open');opened=row}else if(opened===row)opened=null}
+  row.addEventListener('touchstart',e=>{
+   if(e.target.closest('[data-delete-receipt]'))return;
+   const t=e.touches[0];startX=t.clientX;startY=t.clientY;
+   startOffset=row.classList.contains('is-open')?-88:0;tracking=true;axis=null;suppressClick=false;
+  },{passive:true});
+  row.addEventListener('touchmove',e=>{
+   if(!tracking)return;
+   const t=e.touches[0],dx=t.clientX-startX,dy=t.clientY-startY;
+   if(!axis&&Math.max(Math.abs(dx),Math.abs(dy))>8)axis=Math.abs(dx)>Math.abs(dy)*1.3?'horizontal':'vertical';
+   if(axis!=='horizontal')return;
+   e.preventDefault();suppressClick=true;
+   const translate=Math.max(-88,Math.min(0,startOffset+dx));
+   content.style.transform='translateX('+translate+'px)';
+  },{passive:false});
+  row.addEventListener('touchend',e=>{
+   if(!tracking)return;tracking=false;
+   if(axis==='horizontal'){
+    const t=e.changedTouches[0],dx=t.clientX-startX;
+    const offset=Math.max(-88,Math.min(0,startOffset+dx));
+    content.style.transform='';
+    setOpen(offset < -44);
+    setTimeout(()=>{suppressClick=false},350);
+   }
+  },{passive:true});
+  row.addEventListener('touchcancel',()=>{tracking=false;content.style.transform=''}, {passive:true});
+  main.addEventListener('click',e=>{
+   if(suppressClick){e.preventDefault();return}
+   if(row.classList.contains('is-open')){setOpen(false);return}
+   openReceipt(kind,id,clientId);
+  });
+  remove.addEventListener('click',()=>deleteReceipt(kind,id,clientId));
+ });
 }
 function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자의 Google 계정으로 연결할 예정입니다. 연결 기능은 현재 미구현 상태입니다.');if(panel==='reset')return simplePanel('초기화',`<p>모든 예약, 고객, 서비스와 설정을 초기화합니다.</p><button class="danger" data-reset="1">전체 데이터 초기화</button>`);const entries=[['google','icons/settings/google.png','Google 캘린더 연동'],['services','💅','서비스 가격'],['hours','🕒','예약 시간 설정'],['client','👥','고객 관리'],['backup','icons/settings/backup.png','백업 내보내기·가져오기'],['reset','icons/settings/reset.png','초기화']];return `<div class="wrap">${entries.map(([id,ic,label])=>`<button class="setting-row" data-panel="${id}"><span class="emoji">${ic.startsWith("icons/")?`<img src="${ic}" alt="">`:ic}</span><span>${label}</span><span class="arrow">›</span></button>`).join('')}</div>`}
 function panelHead(s){return `<div class="menu-head"><button data-back="1">‹</button><strong>${s}</strong></div>`}function simplePanel(title,content){return `<div class="wrap">${panelHead(title)}<div class="card">${content}</div></div>`}
@@ -439,7 +514,7 @@ function removeClient(id){
  if(confirm('고객을 삭제할까요?')){store.clients=store.clients.filter(c=>c.id!==id);save();render();notify('고객 삭제 완료')}
 }
 function backupPage(){return `<div class="wrap">${panelHead('백업 내보내기·가져오기')}<div class="card"><b>전체 데이터 백업</b><p class="muted">고객·예약·서비스·설정을 JSON 파일로 내보냅니다.</p><button class="primary" data-export="1">전체 백업 내보내기</button></div><div class="card"><b>백업 가져오기</b><p class="note">기존 자료를 덮어쓰므로 가져오기 전에 먼저 백업해 주세요.</p><input type="file" id="importFile" accept="application/json,.json"></div><p class="note">이 앱은 현재 사용하는 기기에 로컬로 저장됩니다. 브라우저 데이터 삭제나 앱 재설치로 자료가 사라질 수 있으므로 정기적으로 백업하세요.</p></div>`}
-function bind(){root.querySelectorAll('[data-tab]').forEach(e=>e.onclick=()=>{tab=e.dataset.tab;panel=null;editing=null;checkedServices=[];extras=[];render()});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel=visibleBookings(selected).length?'appointments':null;render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelector('[data-treatment-open]')?.addEventListener('click',openTreatmentWheel);root.querySelectorAll('[data-treatment-remove]').forEach(e=>e.onclick=()=>{captureForm();checkedServices=checkedServices.filter(id=>id!==e.dataset.treatmentRemove);recalcTreatmentEnd();render();restoreForm()});root.querySelectorAll('[data-add-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.push({name:'',amount:0});render();restoreForm()});root.querySelectorAll('[data-remove-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.splice(+e.dataset.removeExtra,1);render();restoreForm()});const payCard=root.querySelector('#payCard'),payCash=root.querySelector('#payCash');
+function bind(){bindReceiptSwipes();root.querySelectorAll('[data-tab]').forEach(e=>e.onclick=()=>{tab=e.dataset.tab;panel=null;editing=null;checkedServices=[];extras=[];render()});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel=visibleBookings(selected).length?'appointments':null;render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelector('[data-treatment-open]')?.addEventListener('click',openTreatmentWheel);root.querySelectorAll('[data-treatment-remove]').forEach(e=>e.onclick=()=>{captureForm();checkedServices=checkedServices.filter(id=>id!==e.dataset.treatmentRemove);recalcTreatmentEnd();render();restoreForm()});root.querySelectorAll('[data-add-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.push({name:'',amount:0});render();restoreForm()});root.querySelectorAll('[data-remove-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.splice(+e.dataset.removeExtra,1);render();restoreForm()});const payCard=root.querySelector('#payCard'),payCash=root.querySelector('#payCash');
 if(payCard&&payCash){payCard.onchange=()=>{if(payCard.checked)payCash.checked=false};payCash.onchange=()=>{if(payCash.checked)payCard.checked=false}}
 root.querySelectorAll('[data-save-booking]').forEach(e=>e.onclick=submitBooking);root.querySelectorAll('[data-delete-booking]').forEach(e=>e.onclick=()=>{if(confirm('이 예약을 삭제할까요?')){store.bookings=store.bookings.filter(b=>b.id!==e.dataset.deleteBooking);save();editing=null;tab='calendar';render();notify('예약 삭제 완료')}});root.querySelectorAll('[data-sales-period]').forEach(e=>e.onclick=()=>{panel=e.dataset.salesPeriod;render()});root.querySelectorAll('[data-sales-move]').forEach(e=>e.onclick=()=>{const period=panel==='week'?'week':panel==='year'?'year':'month',n=+e.dataset.salesMove;if(period==='week')selected=shift(selected,n*7);else if(period==='year')cursor=new Date(cursor.getFullYear()+n,cursor.getMonth(),1);else cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);render()});root.querySelectorAll('[data-wheel-kind]').forEach(e=>e.onclick=()=>openServiceWheel(e.dataset.wheelId,e.dataset.wheelKind));root.querySelector('[data-add-service]')?.addEventListener('click',()=>{readServices();store.services.push({id:uid(),name:'새 서비스',price:0,minutes:60});render()});root.querySelectorAll('[data-delete-s]').forEach(e=>e.onclick=()=>{readServices();store.services=store.services.filter(s=>s.id!==e.dataset.deleteS);render()});root.querySelector('[data-save-services]')?.addEventListener('click',()=>{readServices();save();render();notify('서비스 저장 완료')});root.querySelector('[data-open-closed-wheel]')?.addEventListener('click',openClosedDaysWheel);root.querySelector('[data-save-hours]')?.addEventListener('click',()=>{store.settings={open:val('open'),close:val('close'),interval:+val('interval'),closedDays:[...root.querySelectorAll('[data-closed-day]:checked')].map(e=>+e.dataset.closedDay)};if(mins(store.settings.open)>=mins(store.settings.close)){alert('영업 종료는 시작보다 늦어야 합니다.');return}save();notify('예약 시간 저장 완료')});root.querySelector('[data-add-client]')?.addEventListener('click',addClient);root.querySelectorAll('[data-client-detail]').forEach(e=>e.onclick=()=>openClientDetail(e.dataset.clientDetail));root.querySelector('[data-export]')?.addEventListener('click',()=>{const blob=new Blob([JSON.stringify({app:'SNAIL_BOOK',version:1,exportedAt:new Date().toISOString(),data:store},null,2)],{type:'application/json'});let a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download='SNAIL_BOOK_backup_'+localDate(new Date())+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),500)});root.querySelector('#importFile')?.addEventListener('change',async e=>{let file=e.target.files[0];if(!file)return;try{const x=JSON.parse(await file.text());if(x.app!=='SNAIL_BOOK'||!x.data||!Array.isArray(x.data.clients)||!Array.isArray(x.data.bookings)||!Array.isArray(x.data.services))throw Error('형식 오류');if(!confirm('현재 모든 데이터를 백업 파일로 교체할까요?'))return;store=x.data;save();render();notify('복원 완료')}catch(err){alert('S’NAIL BOOK 백업 파일이 아닙니다.')}});root.querySelector('[data-reset]')?.addEventListener('click',()=>{if(confirm('정말 전체 데이터를 초기화할까요? 복구할 수 없습니다.')&&confirm('한 번 더 확인합니다. 전체 삭제할까요?')){store=clone(base);save();panel=null;render();notify('초기화 완료')}})}
 function bindSearchResults(){root.querySelectorAll('#searchResults [data-edit]').forEach(e=>e.onclick=()=>{editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()})}
