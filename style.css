@@ -488,3 +488,15 @@ html,body,#app{overscroll-behavior-y:none;overscroll-behavior-x:none;}
 .member-charge-cancel{background:#edf0f5;color:#414858}
 .member-charge-confirm{background:#327ef5;color:#fff}
 .member-charge-confirm:disabled{opacity:.38}
+
+/* v0.5.9: iOS-style membership face-value wheel, selectable 5–100 ten-thousand KRW */
+.member-charge-dialog{max-height:85dvh;overflow-y:auto}
+.member-charge-wheel-label{text-align:center;font-size:14px;font-weight:700;color:#6e7381;margin:0 0 8px}
+.member-charge-wheel-frame{position:relative;height:260px;overflow:hidden;border-radius:18px;background:#34363b;color:#fff;margin:0 0 14px}
+.member-charge-wheel-highlight{position:absolute;top:104px;left:14px;right:14px;height:52px;background:#666a72;border-radius:14px;pointer-events:none}
+.member-charge-wheel-list{position:relative;z-index:1;height:260px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-snap-type:y mandatory;scrollbar-width:none}
+.member-charge-wheel-list::-webkit-scrollbar{display:none}
+.member-charge-wheel-pad{height:104px;scroll-snap-align:none}
+.member-charge-wheel-option{height:52px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;color:#b1b3bb;font-weight:700;font-size:27px;cursor:pointer;user-select:none}
+.member-charge-wheel-option[aria-selected="true"]{color:#fff;font-size:33px}
+.member-charge-method-label{font-size:15px;margin:0 0 10px;text-align:center}
