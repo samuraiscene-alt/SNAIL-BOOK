@@ -780,3 +780,34 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .light .wrap:has(> .form-title) .card .row[style*="margin-top"]{
  margin-top:8px!important;
 }
+
+/* v0.8.0: tighten the exact green-marked top/bottom margins of booking cards. */
+.light .wrap:has(> .form-title) > .card:first-of-type{
+ padding-top:5px;
+ padding-bottom:5px;
+}
+.light .wrap:has(> .form-title) > .card:first-of-type > .field:first-child{
+ padding-top:4px;
+}
+.light .wrap:has(> .form-title) > .card:first-of-type > .field:last-child{
+ padding-bottom:4px;
+}
+.light .wrap:has(> .form-title) > .card:has(> .field > #status){
+ padding-top:7px;
+ padding-bottom:7px;
+}
+.light .wrap:has(> .form-title) > .card:has(> .field > #status) > .field{
+ padding-top:8px;
+ padding-bottom:8px;
+}
+.light .wrap:has(> .form-title) > .card:has(> .field > #status) > .payment-method-block{
+ padding-top:10px;
+ margin-top:2px;
+ margin-bottom:7px;
+}
+.light .wrap:has(> .form-title) > .card:has(> .field > #status) .payment-method-block > b{
+ margin-bottom:9px;
+}
+.light .wrap:has(> .form-title) > .card:has(> .field > #status) .payment-note{
+ margin-top:7px;
+}
