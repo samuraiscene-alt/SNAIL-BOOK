@@ -952,3 +952,14 @@ body > nav.nav{
 .personal-editor-actions button{flex:1;border:0;border-radius:11px;min-height:47px;background:#eceef3;font-weight:800}
 .personal-editor-actions .personal-save{background:#347ef4;color:white}
 .personal-editor-actions .personal-delete{background:#fbeaf0;color:#cc3450}
+
+/* v0.8.8 personal calendar: keep details above the fixed bottom navigation. */
+.appointment-backdrop{z-index:180!important;padding-bottom:calc(88px + env(safe-area-inset-bottom,0px))!important}
+.appointment-modal{max-height:min(75dvh,calc(100dvh - 135px));padding-bottom:12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.appointment-modal .detail{padding-bottom:8px}
+.appointment-modal .personal-add{position:sticky;bottom:0;z-index:2;margin-bottom:0;box-shadow:0 -7px 14px #15161d}
+.calendar-root .mini-personal{display:block;width:max-content;max-width:100%;min-width:0;box-sizing:border-box;padding:2px 5px;border-radius:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.personal-editor-backdrop{z-index:260}
+.personal-editor-dialog{max-height:calc(100dvh - 45px - env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+.personal-editor-two label{min-width:0}
+.personal-editor-two input{min-width:0}
