@@ -1334,3 +1334,65 @@ body > nav.nav > button.active > .nav-icon{
  border:1px solid #f1d9e2;
  box-shadow:0 2px 9px rgba(149,66,96,.035);
 }
+
+/* v1.0.1: larger accessible Korean typography, existing geometry/icons unchanged */
+#app{font-family:"Apple SD Gothic Neo","Noto Sans KR",-apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:-.018em;-webkit-font-smoothing:antialiased}
+#app.light{color:#543247}
+#app.light .muted,#app.light .note,#app.light .payment-note{color:#786270}
+#app.light .wrap > .form-title{font-size:26px;line-height:1.35;font-weight:800}
+#app.light .wrap > .form-title .app-version-label{font-size:13px}
+#app.light .wrap:has(> .form-title) .field > label{font-size:18px;font-weight:750;letter-spacing:-.035em}
+#app.light .wrap:has(> .form-title) .field input,
+#app.light .wrap:has(> .form-title) .field select,
+#app.light .wrap:has(> .form-title) .field textarea{font-size:18px;font-weight:650;min-width:0}
+#app.light .wrap:has(> .form-title) .field input::placeholder,
+#app.light .wrap:has(> .form-title) .field textarea::placeholder{color:#89727e;font-weight:500}
+#app.light .wrap:has(> .form-title) .card .row > b,
+#app.light .wrap:has(> .form-title) .payment-method-block > b{font-size:18px;font-weight:750}
+#app.light .wrap:has(> .form-title) .treatment-gender,
+#app.light .wrap:has(> .form-title) .treatment-category{font-size:18px;font-weight:750}
+#app.light .wrap:has(> .form-title) .selected-treatment{font-size:17px;font-weight:650}
+#app.light .wrap:has(> .form-title) .payment-switch-option{font-size:17px}
+#app.light .wrap:has(> .form-title) > button.primary{font-size:19px;font-weight:800}
+#app.light .wrap:has(> .form-title) .payment-note,
+#app.light .wrap:has(> .form-title) > .note{font-size:14px;line-height:1.65}
+#app.light .wrap:has(> .form-title) .row .muted{font-size:14px;color:#796576}
+#app.light > .wrap > .setting-row{font-size:19px;font-weight:750;letter-spacing:-.035em}
+#app.light > .wrap > .setting-row > span:not(.settings-icon):not(.arrow){min-width:0;overflow-wrap:anywhere}
+#app.light > .wrap > .app-update-line{font-size:14px;color:#7d6272}
+#app.light > .wrap > .app-update-line button{font-size:14px;font-weight:750}
+#app.light .sales-popup-page .sales-period-button{font-size:19px;font-weight:800}
+#app.light .sales-popup-page .sales-popup-hint{font-size:15px;color:#806477}
+#app.light .sales-popup-header{font-size:23px;font-weight:800}
+#app.light .sales-popup-scroll .sales-range-controls strong{font-size:18px}
+#app.light .sales-popup-scroll .sales-range-nav > span{font-size:15px;color:#7e6173}
+#app.light .sales-popup-scroll .sales-accordion-body > .section-title{font-size:19px}
+#app.light .sales-popup-scroll .receipt-customer summary{font-size:16px}
+#app.light .sales-popup-scroll .receipt-swipe-main{font-size:15px}
+#app.light .sales-popup-scroll .receipt-row-date{font-size:13px}
+#app.calendar-root .heading-nav strong{font-size:26px;font-weight:800}
+#app.calendar-root .segment button{font-size:17px;font-weight:800}
+#app.calendar-root .weeknames{font-size:13px;font-weight:800;color:#99546d}
+#app.calendar-root .month-cell .day-num{font-size:19px;line-height:25px;font-weight:800}
+#app.calendar-root .day-num.today{height:27px;width:27px;line-height:27px}
+#app.calendar-root .day-count{font-size:11px;font-weight:750;color:#28547d}
+#app.calendar-root .mini-book{font-size:11px;line-height:15px}
+#app.calendar-root .plus-count{font-size:11px}
+#app.calendar-root .observance-mini{font-size:10px}
+#app.calendar-root .week-day strong{font-size:19px;font-weight:800}
+#app.calendar-root .week-day.active strong{height:29px;width:29px;line-height:29px}
+#app.calendar-root .week-day small{font-size:12px}
+#app.calendar-root .calendar-popup-title h3{font-size:22px;font-weight:800}
+#app.calendar-root .calendar-menu-popup .personal-menu-help{font-size:15px;color:#6f5968}
+#app.calendar-root .calendar-menu-popup .personal-add{font-size:18px}
+#app.calendar-root .calendar-menu-popup .personal-list-copy strong{font-size:17px}
+#app.calendar-root .calendar-menu-popup .personal-list-copy small{font-size:13px;color:#735769}
+#app.calendar-root .calendar-popup:not(.calendar-menu-popup) .search{font-size:18px}
+#app.calendar-root .calendar-popup:not(.calendar-menu-popup) #searchResults{font-size:15px}
+@media(max-width:380px){
+ #app.light .wrap:has(> .form-title) .field > label{font-size:17px;flex-basis:92px}
+ #app.light .wrap:has(> .form-title) .field input,#app.light .wrap:has(> .form-title) .field select{font-size:16px}
+ #app.light > .wrap > .setting-row{font-size:18px}
+ #app.calendar-root .month-cell .day-num{font-size:18px}
+ #app.calendar-root .mini-book{font-size:10px}
+}
