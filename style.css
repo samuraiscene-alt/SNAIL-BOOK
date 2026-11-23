@@ -988,3 +988,32 @@ body > nav.nav{
 .personal-delete-panel button{width:100%;min-height:48px;border:0;border-radius:11px;font-weight:800;font-size:15px;margin-top:9px;background:#eaf2ff;color:#216ce0}
 .personal-delete-panel .personal-delete-all{background:#fce8ed;color:#c02d4b}
 .personal-delete-panel .personal-delete-abort{background:#eff0f4;color:#4d5361}
+
+/* v0.9.1: wheel pencil editing and explicit itemized charges / discounts */
+.settings-service-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+.settings-service-edit{min-width:0;border-radius:12px;border:1px solid #6a7488;background:#e5eaf4;color:#1b2636;display:flex;align-items:center;justify-content:center;min-height:48px}
+.settings-service-edit:disabled{opacity:.35}
+.settings-service-edit-backdrop{position:fixed;inset:0;z-index:340;background:#000a;display:flex;align-items:center;justify-content:center;padding:16px}
+.settings-service-edit-panel{width:min(100%,430px);max-height:calc(100dvh - 40px);overflow:auto;background:#fff;color:#242631;border-radius:22px;padding:22px 20px}
+.settings-service-edit-panel h3{margin:0 0 18px;font-size:21px}
+.settings-service-edit-panel label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:750;margin-bottom:13px}
+.settings-service-edit-panel input{height:46px;width:100%;border:1px solid #d7dce9;border-radius:10px;background:#f5f6fa;padding:10px 12px;font-size:17px;color:#181b23}
+.settings-service-edit-buttons{display:flex;gap:10px;margin-top:18px}
+.settings-service-edit-buttons button{flex:1;min-height:48px;border:0;border-radius:11px;background:#e9ebf0;font-weight:800}
+.settings-service-edit-buttons .service-edit-save{background:#3178ed;color:#fff}
+.extras-header{gap:12px;flex-wrap:wrap}
+.extras-add-actions{display:flex;gap:7px;flex-shrink:0}
+.extras-add-actions button{height:44px;min-width:54px;border-radius:11px;font-size:25px;font-weight:800;border:1px solid transparent}
+.extras-plus{background:#e5f0ff;color:#0875e8;border-color:#b6d6ff!important}
+.extras-minus{background:#ffe9ec;color:#d53a55;border-color:#f4c2ca!important}
+.extras-editor-row{display:flex;align-items:center;gap:7px}
+.extras-editor-row input[data-extra-name]{min-width:0;flex:2 1 0}
+.extras-editor-row input[data-extra-amount]{min-width:0;flex:1 1 0;text-align:right}
+.extras-kind{flex:0 0 20px;font-size:21px;font-weight:800}
+.extras-kind.plus,.extras-bill-row .plus{color:#1479e9}
+.extras-kind.minus,.extras-bill-row .minus{color:#d33a50}
+.extras-editor-row .danger{flex:0 0 40px}
+.extras-bill{margin-top:11px;display:grid;gap:7px}
+.extras-bill-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#545b69}
+.extras-bill-row span{min-width:0;overflow-wrap:anywhere}
+.extras-bill-row b{flex-shrink:0}
