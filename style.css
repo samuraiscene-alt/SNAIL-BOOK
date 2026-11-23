@@ -886,42 +886,41 @@ body > nav.nav > button > .nav-icon{
  display:block;
 }
 
-/* v0.8.4: iOS standalone viewport-height fix.
-   The entire app lives inside a viewport-height scroll container,
-   so short sales/settings screens cannot change the nav's fixed baseline. */
-html{
- height:100%;
+/* v0.8.6: remove the v0.8.4 100%-height clipping.
+   Use the actual viewport in installed iOS PWA and keep one bottom nav. */
+html,body{
+ height:auto;
  min-height:100%;
- overflow:hidden;
+ max-height:none;
+ overflow-x:hidden;
+ overflow-y:auto;
 }
 body{
- height:100%;
- min-height:100%;
- max-height:100%;
- overflow:hidden;
- position:relative;
+ position:static;
+ min-height:100dvh;
 }
 #app,
 #app.light,
 #app.calendar-root{
- height:100%;
- min-height:0!important;
- max-height:100%;
- overflow-y:auto;
- overflow-x:hidden;
- -webkit-overflow-scrolling:touch;
- overscroll-behavior-y:contain;
+ height:auto;
+ min-height:100dvh!important;
+ max-height:none;
+ overflow:visible;
  box-sizing:border-box;
+ padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));
 }
 body > nav.nav{
  position:fixed!important;
- left:0!important;
- right:0!important;
+ inset:auto 0 0 0!important;
  top:auto!important;
  bottom:0!important;
  margin:0!important;
  transform:none!important;
+ width:100%;
+ z-index:100!important;
 }
+/* Navigation takes no extra document space: the main content may reach
+   down to the bar, with a small reserved scroll clearance. */
 
 /* v0.8.5 - visible installed-app version and safe, in-app refresh control. */
 .app-update-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 10px 5px;color:#9095a3;font-size:12px}
