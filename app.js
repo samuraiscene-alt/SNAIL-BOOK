@@ -249,14 +249,58 @@ function render(){const dark=tab==='calendar';root.className=dark?'calendar-root
 function heading(){const anchor=view==='month'?`${cursor.getFullYear()}년 ${cursor.getMonth()+1}월`:view==='week'?`${shift(weekStart(selected),0).slice(5).replace('-','/')} – ${shift(weekStart(selected),6).slice(5).replace('-','/')}`:dateTitle(selected);return `<div class="heading-nav"><button data-move="-1" aria-label="이전">‹</button><strong>${anchor}</strong><button data-move="1" aria-label="다음">›</button></div>`}
 function weekStart(d){const day=dateOf(d).getDay();return shift(d,-((day+6)%7))}
 function calendarPage(){let html=`<div class="wrap"><div class="calendar-top"><button class="round-dark" data-panel="menu" aria-label="개인 일정 관리">≡</button><button class="round-dark" data-panel="search" aria-label="검색">⌕</button></div><div class="segment dark">${['month','week','day'].map((v,i)=>`<button data-view="${v}" class="${view===v?'active':''}">${['월간','주간','일간'][i]}</button>`).join('')}</div>${heading()}`;if(view==='month')html+=monthGrid();else html+=timeGrid();if(panel==='search')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup" role="dialog" aria-modal="true" aria-label="예약 검색"><div class="calendar-popup-title"><h3>예약 검색</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div><input id="calSearch" class="search" placeholder="고객 이름 검색" value="${esc(search)}"><div id="searchResults">${searchResults()}</div></section></div>`;if(panel==='menu')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup calendar-menu-popup" role="dialog" aria-modal="true" aria-label="개인 일정 관리"><div class="calendar-popup-title"><h3>개인 일정 관리</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div>${personalCalendarMenu()}</section></div>`;if(panel==='appointments')html+=`<div class="appointment-backdrop" data-close-appointments="1"><section class="appointment-modal" role="dialog" aria-modal="true" aria-label="${dateTitle(selected)} 예약 상세"><button class="modal-close" data-close-appointments="1" aria-label="닫기">×</button>${dayDetail(selected)}</section></div>`;return html+'</div>'}
-function monthGrid(){const first=new Date(cursor.getFullYear(),cursor.getMonth(),1);const offset=(first.getDay()+6)%7;const count=Math.ceil((offset+new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate())/7)*7;const start=new Date(first);start.setDate(1-offset);let html='<div class="weeknames">'+['월','화','수','목','금','토','일'].map(v=>`<span>${v}</span>`).join('')+'</div><div class="month-grid">';for(let i=0;i<count;i++){let d=new Date(start);d.setDate(d.getDate()+i);let s=localDate(d),list=visibleBookings(s),out=d.getMonth()!==cursor.getMonth();html+=`<div class="month-cell ${s===selected?'sel':''}" data-date="${s}"><span class="day-num ${out?'outside':''} ${d.getDay()===0?'sun':''} ${s===localDate(new Date())?'today':''}">${d.getDate()}</span>${list.length?`<div class="day-count">${list.length}명</div>`:''}${list.slice(0,2).map(b=>`<div class="mini-book">${esc(b.start)}</div>`).join('')}${list.length>2?`<div class="plus-count">+${list.length-2}</div>`:''}${personalEventsOn(s).slice(0,2).map(e=>`<div class="mini-personal" style="border-color:${PERSONAL_TYPES[e.type]?.color||'#b394fa'}">${esc(e.title)}</div>`).join('')}</div>`}html+='</div>';return html}
-function dayDetail(d){let bs=visibleBookings(d);return `<div class="detail"><h3>${dateTitle(d)} 예약 · ${bs.length}명</h3>${bs.length?bs.map(b=>`<button class="detail-row" data-edit="${b.id}"><span class="time-col">${b.start}–${b.end}</span><span><b>${esc(clientName(b))}</b><div class="sub">${esc(serviceNames(b))} · ${b.status==='paid'?'완료':b.status==='done'?'시술 완료 · 미정산':b.status==='noshow'?'노쇼':'예약'}</div></span><span style="margin-left:auto">›</span></button>`).join(''):'<div class="empty">예약 없음</div>'}<h3 class="personal-detail-title">개인 일정 · ${personalEventsOn(d).length}건</h3>${personalEventsOn(d).map(e=>personalEventRow(e,d)).join('')}<button type="button" class="personal-add" data-add-personal="${d}">＋ 이 날짜에 일정 추가</button></div>`}
+
+/* Date labels are informational. Only Korea's published 2026/2027 calendars
+   include movable lunar holidays and their officially announced substitute dates. */
+const KOREA_HOLIDAYS={
+ 2026:{
+ '01-01':'신정','02-16':'설날 연휴','02-17':'설날','02-18':'설날 연휴',
+ '03-01':'삼일절','03-02':'대체공휴일(삼일절)','05-01':'노동절','05-05':'어린이날',
+ '05-24':'부처님오신날','05-25':'대체공휴일(부처님오신날)','06-03':'지방선거일',
+ '06-06':'현충일','07-17':'제헌절','08-15':'광복절','08-17':'대체공휴일(광복절)',
+ '09-24':'추석 연휴','09-25':'추석','09-26':'추석 연휴',
+ '10-03':'개천절','10-05':'대체공휴일(개천절)','10-09':'한글날','12-25':'성탄절'
+ },
+ 2027:{
+ '01-01':'신정','02-06':'설날 연휴','02-07':'설날','02-08':'설날 연휴','02-09':'대체공휴일(설날)',
+ '03-01':'삼일절','05-01':'노동절','05-03':'대체공휴일(노동절)','05-05':'어린이날','05-13':'부처님오신날',
+ '06-06':'현충일','07-17':'제헌절','07-19':'대체공휴일(제헌절)',
+ '08-15':'광복절','08-16':'대체공휴일(광복절)',
+ '09-14':'추석 연휴','09-15':'추석','09-16':'추석 연휴',
+ '10-03':'개천절','10-04':'대체공휴일(개천절)','10-09':'한글날',
+ '10-11':'대체공휴일(한글날)','12-25':'성탄절','12-27':'대체공휴일(성탄절)'
+ }
+};
+const KOREA_FIXED_HOLIDAYS={
+ '01-01':'신정','03-01':'삼일절','05-01':'노동절','05-05':'어린이날','06-06':'현충일',
+ '07-17':'제헌절','08-15':'광복절','10-03':'개천절','10-09':'한글날','12-25':'성탄절'
+};
+const INTERNATIONAL_OBSERVANCES={
+ '02-14':'발렌타인데이','03-08':'세계 여성의 날','04-22':'지구의 날',
+ '10-24':'유엔의 날','10-31':'할로윈','12-24':'크리스마스 이브'
+};
+function calendarObservances(date){
+ const year=Number(date.slice(0,4)),md=date.slice(5);
+ const korean=(KOREA_HOLIDAYS[year]||KOREA_FIXED_HOLIDAYS)[md];
+ const global=INTERNATIONAL_OBSERVANCES[md];
+ const result=[];
+ if(korean)result.push({name:korean,kind:'kr',official:Boolean(KOREA_HOLIDAYS[year]),note:KOREA_HOLIDAYS[year]?'한국 공휴일':'한국 고정 공휴일 · 이동 공휴일 미확인'});
+ if(global)result.push({name:global,kind:'world',official:false,note:'세계 기념일 · 휴무일 아님'});
+ return result;
+}
+function calendarObservanceMarkup(date,detail=false){
+ const labels=calendarObservances(date);
+ if(!labels.length)return '';
+ return labels.map(x=>'<div class="'+(detail?'observance-detail':'observance-mini')+' '+(x.kind==='kr'?'observance-kr':'observance-world')+'" title="'+esc(x.note)+'">'+esc(x.name)+'</div>').join('');
+}
+function monthGrid(){const first=new Date(cursor.getFullYear(),cursor.getMonth(),1);const offset=(first.getDay()+6)%7;const count=Math.ceil((offset+new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate())/7)*7;const start=new Date(first);start.setDate(1-offset);let html='<div class="weeknames">'+['월','화','수','목','금','토','일'].map(v=>`<span>${v}</span>`).join('')+'</div><div class="month-grid">';for(let i=0;i<count;i++){let d=new Date(start);d.setDate(d.getDate()+i);let s=localDate(d),list=visibleBookings(s),out=d.getMonth()!==cursor.getMonth(),observances=calendarObservances(s);html+=`<div class="month-cell ${s===selected?'sel':''}" data-date="${s}"><span class="day-num ${out?'outside':''} ${d.getDay()===0?'sun':''} ${observances.some(x=>x.kind==='kr')?'holiday-red':''} ${s===localDate(new Date())?'today':''}">${d.getDate()}</span>${calendarObservanceMarkup(s)}${list.length?`<div class="day-count">${list.length}명</div>`:''}${list.slice(0,2).map(b=>`<div class="mini-book">${esc(b.start)}</div>`).join('')}${list.length>2?`<div class="plus-count">+${list.length-2}</div>`:''}${personalEventsOn(s).slice(0,2).map(e=>`<div class="mini-personal" style="border-color:${PERSONAL_TYPES[e.type]?.color||'#b394fa'}">${esc(e.title)}</div>`).join('')}</div>`}html+='</div>';return html}
+function dayDetail(d){let bs=visibleBookings(d);return `<div class="detail"><h3>${dateTitle(d)} 예약 · ${bs.length}명</h3>${calendarObservanceMarkup(d,true)}${bs.length?bs.map(b=>`<button class="detail-row" data-edit="${b.id}"><span class="time-col">${b.start}–${b.end}</span><span><b>${esc(clientName(b))}</b><div class="sub">${esc(serviceNames(b))} · ${b.status==='paid'?'완료':b.status==='done'?'시술 완료 · 미정산':b.status==='noshow'?'노쇼':'예약'}</div></span><span style="margin-left:auto">›</span></button>`).join(''):'<div class="empty">예약 없음</div>'}<h3 class="personal-detail-title">개인 일정 · ${personalEventsOn(d).length}건</h3>${personalEventsOn(d).map(e=>personalEventRow(e,d)).join('')}<button type="button" class="personal-add" data-add-personal="${d}">＋ 이 날짜에 일정 추가</button></div>`}
 function timeGrid(){
  const isWeek=view==='week',start=isWeek?weekStart(selected):selected;
  const days=isWeek?Array.from({length:7},(_,i)=>shift(start,i)):[selected];
  const first=0,last=24,unit=isWeek?96:80;
- const head=isWeek?'<div class="week-days-viewport"><div class="week-days">'+days.map(d=>'<button class="week-day '+(selected===d?'active':'')+'" data-date="'+d+'">'+w[dateOf(d).getDay()]+'<strong>'+dateOf(d).getDate()+'</strong><small>'+visibleBookings(d).length+'명</small></button>').join('')+'</div></div>':
- '<div class="day-head-summary">'+visibleBookings(selected).length+'명 예약 · 개인 일정 '+personalEventsOn(selected).length+'건</div>';
+ const head=isWeek?'<div class="week-days-viewport"><div class="week-days">'+days.map(d=>'<button class="week-day '+(selected===d?'active':'')+'" data-date="'+d+'">'+w[dateOf(d).getDay()]+'<strong class="'+(calendarObservances(d).some(x=>x.kind==='kr')?'holiday-red':'')+'">'+dateOf(d).getDate()+'</strong><small>'+visibleBookings(d).length+'명</small></button>').join('')+'</div></div>':
+ '<div class="day-head-summary">'+visibleBookings(selected).length+'명 예약 · 개인 일정 '+personalEventsOn(selected).length+'건</div>'+calendarObservanceMarkup(selected,true);
  const labels=Array.from({length:last-first+1},(_,i)=>'<div class="hour-lab">'+String(first+i).padStart(2,'0')+'</div>').join('');
  const cols=days.map(d=>'<div class="week-column">'+visibleBookings(d).map(b=>{
   const top=Math.max(0,(mins(b.start)-first*60)/60*unit);
@@ -1182,7 +1226,7 @@ async function refreshInstalledApp(){
    if(reg)await reg.update();
   }
   const req=new URL('./index.html',window.location.href);
-  req.searchParams.set('v','091');
+  req.searchParams.set('v','092');
   req.searchParams.set('refresh',String(Date.now()));
   window.location.replace(req.toString());
  }catch(err){
@@ -1578,7 +1622,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=091',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=092',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
