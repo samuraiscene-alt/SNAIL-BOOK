@@ -762,7 +762,7 @@ function bindReceiptSwipes(){
   remove.addEventListener('click',()=>deleteReceipt(kind,id,clientId));
  });
 }
-function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자의 Google 계정으로 연결할 예정입니다. 연결 기능은 현재 미구현 상태입니다.');if(panel==='reset')return resetPage();const entries=[['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v0.8.7</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
+function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자의 Google 계정으로 연결할 예정입니다. 연결 기능은 현재 미구현 상태입니다.');if(panel==='reset')return resetPage();const entries=[['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v0.9.3</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
 
 function resetPage(){
  const rows=[
@@ -1093,7 +1093,10 @@ function clientPage(){return `<div class="wrap">${panelHead('고객 관리')}<di
 function openClientDetail(id){
  const c=findClient(id);if(!c)return;
  document.querySelector('.client-detail-backdrop')?.remove();
- const count=store.bookings.filter(b=>b.clientId===c.id&&b.status!=='cancelled').length;
+ const customerBookings=store.bookings.filter(b=>b.clientId===c.id);
+ const count=customerBookings.filter(b=>b.status==='paid'||b.status==='done').length;
+ const cancellationCount=customerBookings.filter(b=>b.status==='cancelled').length;
+ const noShowCount=customerBookings.filter(b=>b.status==='noshow').length;
  const balance=walletLedger(c).balance;
  const pass=browPassLedger(c);
  const backdrop=document.createElement('div');
@@ -1103,6 +1106,8 @@ function openClientDetail(id){
  <h2>${esc(c.name)}</h2>
  <p class="client-detail-phone">${esc(c.phone)}</p>
  <div class="client-detail-stat"><span>방문 기록</span><strong>${count}건</strong></div>
+ ${cancellationCount?'<div class="client-detail-stat client-detail-negative"><span>예약 취소</span><strong>'+cancellationCount+'건</strong></div>':''}
+ ${noShowCount?'<div class="client-detail-stat client-detail-negative"><span>노쇼</span><strong>'+noShowCount+'건</strong></div>':''}
  <div class="client-detail-stat"><span>회원권 잔액</span><strong class="client-detail-credit">${money(balance)}</strong></div>
  <div class="client-detail-stat"><span>눈썹펌 5회권</span><strong>${pass.balance}회 남음 (구매 ${pass.bought}회)</strong></div>
  <div class="client-detail-actions"><button type="button" data-client-edit="${c.id}">고객 정보 수정</button><button type="button" data-wallet-charge="${c.id}">회원권 충전</button><button type="button" class="client-delete" data-client-delete="${c.id}">고객 삭제</button></div>
@@ -1226,7 +1231,7 @@ async function refreshInstalledApp(){
    if(reg)await reg.update();
   }
   const req=new URL('./index.html',window.location.href);
-  req.searchParams.set('v','092');
+  req.searchParams.set('v','093');
   req.searchParams.set('refresh',String(Date.now()));
   window.location.replace(req.toString());
  }catch(err){
@@ -1622,7 +1627,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=092',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=093',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
