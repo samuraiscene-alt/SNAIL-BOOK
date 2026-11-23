@@ -885,3 +885,40 @@ body > nav.nav > button > .nav-icon{
  height:28px;
  display:block;
 }
+
+/* v0.8.4: iOS standalone viewport-height fix.
+   The entire app lives inside a viewport-height scroll container,
+   so short sales/settings screens cannot change the nav's fixed baseline. */
+html{
+ height:100%;
+ min-height:100%;
+ overflow:hidden;
+}
+body{
+ height:100%;
+ min-height:100%;
+ max-height:100%;
+ overflow:hidden;
+ position:relative;
+}
+#app,
+#app.light,
+#app.calendar-root{
+ height:100%;
+ min-height:0!important;
+ max-height:100%;
+ overflow-y:auto;
+ overflow-x:hidden;
+ -webkit-overflow-scrolling:touch;
+ overscroll-behavior-y:contain;
+ box-sizing:border-box;
+}
+body > nav.nav{
+ position:fixed!important;
+ left:0!important;
+ right:0!important;
+ top:auto!important;
+ bottom:0!important;
+ margin:0!important;
+ transform:none!important;
+}
