@@ -1087,3 +1087,41 @@ body > nav.nav{
 .calendar-root .calendar-grid-wrap .week-column{border-color:#ead8df}
 .calendar-root .fab{background:#f35580;border-color:#fbadc4;box-shadow:0 5px 18px rgba(145,52,80,.22);color:#fff}
 /* Dialogs remain dark, preserving their existing contrast and interaction. */
+
+/* v0.9.5: LIGHT personal calendar MANAGEMENT popup only.
+   Search popup, appointment detail, editor, and calendar layout remain unchanged. */
+.calendar-root .calendar-popup-backdrop:has(.calendar-menu-popup){
+  background:rgba(45,25,39,.36);
+}
+.calendar-root .calendar-popup.calendar-menu-popup{
+  background:#fffdfd;
+  color:#563648;
+  border:1px solid #f3c9d8;
+  box-shadow:0 16px 40px rgba(75,33,53,.18);
+}
+.calendar-root .calendar-menu-popup .calendar-popup-title h3{
+  color:#643649;
+}
+.calendar-root .calendar-menu-popup .calendar-popup-title button{
+  color:#b04770;
+}
+.calendar-root .calendar-menu-popup .personal-menu-help{
+  color:#75646d;
+}
+.calendar-root .calendar-menu-popup .personal-add{
+  background:#f35580;
+  color:#fff;
+  border-color:#ed779b;
+  box-shadow:0 3px 9px rgba(229,81,125,.14);
+}
+.calendar-root .calendar-menu-popup .personal-empty{
+  color:#a0919a;
+}
+.calendar-root .calendar-menu-popup .personal-list-row{
+  background:#fff6f9;
+  color:#563648;
+  border-color:#f0cedb;
+}
+.calendar-root .calendar-menu-popup .personal-list-copy small{
+  color:#836777;
+}
