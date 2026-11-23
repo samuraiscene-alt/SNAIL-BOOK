@@ -811,3 +811,41 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .light .wrap:has(> .form-title) > .card:has(> .field > #status) .payment-note{
  margin-top:7px;
 }
+
+/* v0.8.1: lock the bottom tab strip to the calendar/booking baseline
+   on all four screens, including shorter sales/settings pages. */
+#app > nav.nav,
+#app.calendar-root > nav.nav,
+#app.light > nav.nav{
+ position:fixed!important;
+ inset:auto 0 0 0!important;
+ margin:0!important;
+ width:100%;
+ height:calc(66px + env(safe-area-inset-bottom))!important;
+ padding:0 0 env(safe-area-inset-bottom) 0!important;
+ box-sizing:border-box!important;
+ display:flex;
+ flex-direction:row;
+ align-items:stretch;
+ justify-content:space-around;
+ transform:none!important;
+ z-index:100;
+}
+#app > nav.nav > button{
+ flex:1 1 0;
+ min-width:0;
+ height:66px;
+ max-width:none;
+ margin:0;
+ padding:0;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ align-self:flex-start;
+}
+#app > nav.nav .nav-icon{
+ width:28px;
+ height:28px;
+ flex:0 0 28px;
+ display:block;
+}
