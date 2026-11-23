@@ -979,3 +979,12 @@ body > nav.nav{
 .personal-wheel-spacer{height:88px;flex:none}
 .personal-wheel-option{height:44px;line-height:44px;scroll-snap-align:center;font-size:17px;color:#8e929e;font-weight:500;white-space:nowrap}
 .personal-wheel-option.active{font-size:20px;color:#16191f;font-weight:750}
+
+/* v0.9.0: explicit deletion scope for repeating personal events */
+.personal-delete-choice{position:fixed;inset:0;z-index:350;background:#000b;display:flex;align-items:center;justify-content:center;padding:20px}
+.personal-delete-panel{width:min(100%,390px);background:#fff;color:#252837;border-radius:20px;padding:22px 18px;box-shadow:0 16px 48px #0005}
+.personal-delete-panel h3{font-size:19px;margin:0 0 8px}
+.personal-delete-panel p{font-size:14px;line-height:1.5;color:#555c69;margin:0 0 18px}
+.personal-delete-panel button{width:100%;min-height:48px;border:0;border-radius:11px;font-weight:800;font-size:15px;margin-top:9px;background:#eaf2ff;color:#216ce0}
+.personal-delete-panel .personal-delete-all{background:#fce8ed;color:#c02d4b}
+.personal-delete-panel .personal-delete-abort{background:#eff0f4;color:#4d5361}
