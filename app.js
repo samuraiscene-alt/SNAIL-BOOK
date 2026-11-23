@@ -68,38 +68,134 @@ function personalCalendarMenu(){
 }
 function openPersonalEditor(id,date){
  const existing=(store.personalEvents||[]).find(e=>e.id===id);
- const givenDate=existing?.date||date||selected;
- const type=existing?.type||'schedule';
+ const state={date:existing?.date||date||selected,time:existing?.time||'10:00',repeat:existing?.repeat||(!existing&&existing?.type==='birthday'?'yearly':'none')};
  const dlg=document.createElement('div');dlg.className='personal-editor-backdrop';
- const list=Object.entries(PERSONAL_TYPES).map(([k,v])=>
- '<option value="'+k+'"'+(k===type?' selected':'')+'>'+v.label+'</option>').join('');
- const repeat=existing?.repeat||(!existing&&type==='birthday'?'yearly':'none');
- const repeats=[['none','반복 없음'],['weekly','매주 반복 (같은 요일)'],['monthly','매월 반복 (같은 날짜)'],['yearly','매년 반복 (같은 월·일)']].map(([val,label])=>
- '<option value="'+val+'"'+(repeat===val?' selected':'')+'>'+label+'</option>').join('');
+ const type=existing?.type||'schedule';
+ const list=Object.entries(PERSONAL_TYPES).map(([k,v])=>'<option value="'+k+'"'+(k===type?' selected':'')+'>'+v.label+'</option>').join('');
+ const repeatText={none:'반복 없음',weekly:'매주 반복',monthly:'매월 반복',yearly:'매년 반복'};
  dlg.innerHTML='<section class="personal-editor-dialog" role="dialog" aria-modal="true" aria-label="개인 일정 작성">'+
  '<div class="personal-editor-head"><h3>'+(existing?'개인 일정 수정':'개인 일정 등록')+'</h3><button type="button" data-personal-close aria-label="닫기">×</button></div>'+
  '<label>일정 유형<select id="personalType">'+list+'</select></label>'+
  '<label>제목<input id="personalTitle" maxlength="80" placeholder="일정 제목 입력" value="'+esc(existing?.title||'')+'"></label>'+
- '<div class="personal-editor-two"><label>날짜<input id="personalDate" type="date" value="'+esc(givenDate)+'"></label>'+
- '<label>시작 시간<input id="personalTime" type="time" value="'+esc(existing?.time||'10:00')+'"></label></div>'+
- '<label>반복 일정<select id="personalRepeat">'+repeats+'</select></label>'+
+ '<div class="personal-editor-two"><div class="personal-field"><span>날짜</span><button type="button" class="personal-wheel-trigger" data-personal-wheel="date" id="personalDateDisplay"></button></div>'+
+ '<div class="personal-field"><span>시작 시간</span><button type="button" class="personal-wheel-trigger" data-personal-wheel="time" id="personalTimeDisplay"></button></div></div>'+
+ '<div class="personal-field"><span>반복 일정</span><button type="button" class="personal-wheel-trigger" data-personal-wheel="repeat" id="personalRepeatDisplay"></button></div>'+
  '<div class="personal-editor-actions">'+(existing?'<button type="button" class="personal-delete">삭제</button>':'')+
  '<button type="button" class="personal-cancel">취소</button><button type="button" class="personal-save">저장</button></div></section>';
  document.body.appendChild(dlg);
  const prevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
- const close=()=>{dlg.remove();document.body.style.overflow=prevOverflow};
+ const close=()=>{document.querySelector('.personal-wheel-backdrop')?.remove();dlg.remove();document.body.style.overflow=prevOverflow};
+ const refresh=()=>{
+  dlg.querySelector('#personalDateDisplay').textContent=state.date.replace(/-/g,'. ') + '.';
+  const hh=Number(state.time.slice(0,2)),mm=state.time.slice(3);
+  dlg.querySelector('#personalTimeDisplay').textContent=(hh<12?'오전 ':'오후 ')+String(hh%12||12).padStart(2,'0')+':'+mm;
+  dlg.querySelector('#personalRepeatDisplay').textContent=repeatText[state.repeat]||repeatText.none;
+ };
+ refresh();
  const typeControl=dlg.querySelector('#personalType');
- const timeControl=dlg.querySelector('#personalTime');
- typeControl.onchange=()=>{if(typeControl.value==='birthday'&&!existing&&dlg.querySelector('#personalRepeat').value==='none')dlg.querySelector('#personalRepeat').value='yearly'};
+ typeControl.onchange=()=>{if(typeControl.value==='birthday'&&!existing&&state.repeat==='none'){state.repeat='yearly';refresh()}};
+ const openWheel=mode=>{
+  document.querySelector('.personal-wheel-backdrop')?.remove();
+  const sheet=document.createElement('div');
+  sheet.className='personal-wheel-backdrop';
+  const daysIn=(y,m)=>new Date(y,m,0).getDate();
+  const ymd=state.date.split('-').map(Number);
+  const hhmm=state.time.split(':').map(Number);
+  let chosen=mode==='date'?[ymd[0],ymd[1],ymd[2]]:mode==='time'?[hhmm[0]<12?0:1,hhmm[0]%12||12,hhmm[1]]:[state.repeat];
+  const makeRange=(first,last)=>Array.from({length:last-first+1},(_,i)=>i+first);
+  const definitions=mode==='date'?[
+   {values:makeRange(1900,2100),label:v=>v+'년'},
+   {values:makeRange(1,12),label:v=>v+'월'},
+   {values:makeRange(1,daysIn(chosen[0],chosen[1])),label:v=>v+'일'}
+  ]:mode==='time'?[
+   {values:[0,1],label:v=>v?'오후':'오전'},
+   {values:makeRange(1,12),label:v=>v+'시'},
+   {values:makeRange(0,59),label:v=>String(v).padStart(2,'0')+'분'}
+  ]:[{values:['none','weekly','monthly','yearly'],label:v=>repeatText[v]}];
+  const wheelHTML=(def,i)=>'<div class="personal-wheel-column" data-wheel-index="'+i+'" role="listbox" aria-label="'+['년','월','일'][i]+'">'+
+   '<div class="personal-wheel-spacer"></div>'+def.values.map(v=>'<div class="personal-wheel-option" data-wheel-value="'+v+'" role="option">'+esc(def.label(v))+'</div>').join('')+
+   '<div class="personal-wheel-spacer"></div></div>';
+  sheet.innerHTML='<section class="personal-wheel-panel" role="dialog" aria-modal="true" aria-label="휠 선택">'+
+   '<div class="personal-wheel-bar"><button type="button" data-wheel-cancel>취소</button><strong>'+(mode==='date'?'날짜':mode==='time'?'시작 시간':'반복 일정')+'</strong><button type="button" data-wheel-done>완료</button></div>'+
+   '<div class="personal-wheel-columns">'+definitions.map(wheelHTML).join('')+'</div></section>';
+  document.body.appendChild(sheet);
+  const columns=Array.from(sheet.querySelectorAll('.personal-wheel-column'));
+  const rowHeight=44;
+  const updateVisual=col=>{
+   col.querySelectorAll('.personal-wheel-option').forEach((opt,i)=>{
+    const active=definitions[Number(col.dataset.wheelIndex)].values[i]===chosen[Number(col.dataset.wheelIndex)];
+    opt.classList.toggle('active',active);opt.setAttribute('aria-selected',String(active));
+   });
+  };
+  const scrollToValue=(idx,value,smooth=false)=>{
+   const at=definitions[idx].values.indexOf(value),col=columns[idx];
+   if(at<0)return;
+   col.scrollTo({top:at*rowHeight,behavior:smooth?'smooth':'instant'});
+   updateVisual(col);
+  };
+  const updateDay=()=>{
+   if(mode!=='date')return;
+   const max=daysIn(chosen[0],chosen[1]);
+   const old=definitions[2].values.length;
+   if(old===max)return;
+   definitions[2].values=makeRange(1,max);
+   columns[2].innerHTML='<div class="personal-wheel-spacer"></div>'+
+    definitions[2].values.map(v=>'<div class="personal-wheel-option" data-wheel-value="'+v+'" role="option">'+v+'일</div>').join('')+
+    '<div class="personal-wheel-spacer"></div>';
+   chosen[2]=Math.min(chosen[2],max);
+   scrollToValue(2,chosen[2]);
+  };
+  columns.forEach((col,i)=>{
+   scrollToValue(i,chosen[i]);
+   let raf=0;
+   col.addEventListener('scroll',()=>{
+    if(raf)cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(()=>{
+     raf=0;
+     const index=Math.max(0,Math.min(definitions[i].values.length-1,Math.round(col.scrollTop/rowHeight)));
+     chosen[i]=definitions[i].values[index];
+     updateVisual(col);
+     if(mode==='date'&&i<2)updateDay();
+    });
+   },{passive:true});
+   col.addEventListener('click',e=>{
+    const option=e.target.closest('[data-wheel-value]');
+    if(!option)return;
+    const idx=Array.from(col.querySelectorAll('.personal-wheel-option')).indexOf(option);
+    if(idx<0)return;
+    chosen[i]=definitions[i].values[idx];
+    scrollToValue(i,chosen[i],true);
+    if(mode==='date'&&i<2)updateDay();
+   });
+  });
+  const dismiss=()=>sheet.remove();
+  sheet.querySelector('[data-wheel-cancel]').onclick=dismiss;
+  sheet.onclick=e=>{if(e.target===sheet)dismiss()};
+  sheet.querySelector('[data-wheel-done]').onclick=()=>{
+   // Read physical wheel position again so finishing mid-swipe still picks the centered value.
+   columns.forEach((col,i)=>{
+    const idx=Math.max(0,Math.min(definitions[i].values.length-1,Math.round(col.scrollTop/rowHeight)));
+    chosen[i]=definitions[i].values[idx];
+   });
+   if(mode==='date'){
+    chosen[2]=Math.min(chosen[2],daysIn(chosen[0],chosen[1]));
+    state.date=[chosen[0],chosen[1],chosen[2]].map((v,i)=>i?String(v).padStart(2,'0'):v).join('-');
+   }else if(mode==='time'){
+    const h=(chosen[1]%12)+(chosen[0]?12:0);
+    state.time=String(h).padStart(2,'0')+':'+String(chosen[2]).padStart(2,'0');
+   }else state.repeat=chosen[0];
+   refresh();dismiss();
+  };
+ };
+ dlg.querySelectorAll('[data-personal-wheel]').forEach(b=>b.onclick=()=>openWheel(b.dataset.personalWheel));
  dlg.querySelector('[data-personal-close]').onclick=close;dlg.querySelector('.personal-cancel').onclick=close;
  dlg.onclick=e=>{if(e.target===dlg)close()};
  dlg.querySelector('.personal-save').onclick=()=>{
   const title=dlg.querySelector('#personalTitle').value.trim();
-  const eventDate=dlg.querySelector('#personalDate').value;
+  const eventDate=state.date;
   if(!title){alert('일정 제목을 입력해 주세요.');return}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)){alert('날짜를 선택해 주세요.');return}
-  const event={id:existing?.id||uid(),title,type:typeControl.value,date:eventDate,time:timeControl.value||'10:00',
-   repeat:dlg.querySelector('#personalRepeat').value};
+  const event={id:existing?.id||uid(),title,type:typeControl.value,date:eventDate,time:state.time,repeat:state.repeat};
   const before=JSON.stringify(store);
   try{
    if(existing){const idx=store.personalEvents.findIndex(x=>x.id===existing.id);if(idx<0)throw Error('not found');store.personalEvents[idx]=event}
@@ -114,7 +210,6 @@ function openPersonalEditor(id,date){
   save();close();panel=null;render();notify('일정 삭제 완료');
  };
 }
-
 function serviceNames(b){return (b.items||[]).map(i=>i.name).join(' · ')||'시술 미선택'}
 function clientName(b){return findClient(b.clientId)?.name||b.name||'고객'}
 function dateTitle(d){const x=dateOf(d);return `${x.getMonth()+1}월 ${x.getDate()}일 ${w[x.getDay()]}요일`}
@@ -1413,7 +1508,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=088',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=089',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
