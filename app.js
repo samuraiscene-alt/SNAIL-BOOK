@@ -1182,7 +1182,7 @@ async function refreshInstalledApp(){
    if(reg)await reg.update();
   }
   const req=new URL('./index.html',window.location.href);
-  req.searchParams.set('v','090');
+  req.searchParams.set('v','091');
   req.searchParams.set('refresh',String(Date.now()));
   window.location.replace(req.toString());
  }catch(err){
@@ -1578,7 +1578,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=090',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=091',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
