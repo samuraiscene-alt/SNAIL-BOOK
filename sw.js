@@ -1,5 +1,5 @@
-const CACHE='snail-book-v099-20261123';
-const ASSETS=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const CACHE='snail-book-v100-20261123';
+const ASSETS=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./icon-180.png?v=100','./icon-192.png?v=100','./icon-512.png?v=100'];
 self.addEventListener('install',e=>{
  e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
