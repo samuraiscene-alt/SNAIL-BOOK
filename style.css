@@ -745,3 +745,38 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .setting-row .settings-icon.icon-client{background-position-y:-132px}
 .setting-row .settings-icon.icon-backup{background-position-y:-176px}
 .setting-row .settings-icon.icon-reset{background-position-y:-220px}
+
+/* v0.7.9 — shift light-screen content slightly below the iPhone status area,
+   while reclaiming excess vertical space in the booking form only. */
+.light .wrap{
+ padding-top:max(42px,calc(env(safe-area-inset-top) + 14px));
+}
+/* Keep full-size inputs and labels; reduce empty padding BETWEEN fields. */
+.light .wrap:has(> .form-title) > .card:first-of-type .field{
+ padding-top:7px;
+ padding-bottom:7px;
+ min-height:58px;
+}
+.light .wrap:has(> .form-title) > .card:first-of-type{
+ padding-top:13px;
+ padding-bottom:12px;
+}
+/* Better distribute the recovered space through the booking sections. */
+.light .wrap:has(> .form-title) > .card{
+ margin-bottom:11px;
+}
+.light .wrap:has(> .form-title) > .card:not(:first-of-type){
+ padding-top:16px;
+ padding-bottom:16px;
+}
+.light .wrap:has(> .form-title) .treatment-catalog{
+ margin-top:8px;
+ margin-bottom:8px;
+}
+.light .wrap:has(> .form-title) .selected-treatments{
+ margin-top:3px;
+ margin-bottom:3px;
+}
+.light .wrap:has(> .form-title) .card .row[style*="margin-top"]{
+ margin-top:8px!important;
+}
