@@ -1252,3 +1252,47 @@ body > nav.nav > button.active > .nav-icon{
  box-shadow:0 3px 12px rgba(211,49,104,.14);
 }
 #app.light .wrap:has(> .form-title) > .note{color:#876e7b}
+
+/* v0.9.8: sales/settlement weekly, monthly, yearly controls and detail modal only.
+   Retain report values, receipt blue/red semantics, swipe actions, and layout. */
+#app.light:has(.sales-popup-page){
+  background:#fff7fa;
+  color:#513c49;
+}
+#app.light .sales-popup-page .sales-period-bar{
+  background:#fff6fa;
+  border:1px solid #efd4df;
+  box-shadow:0 2px 9px rgba(145,66,98,.06);
+}
+#app.light .sales-popup-page .sales-period-button{color:#926a80}
+#app.light .sales-popup-page .sales-period-button.active{
+  background:#f35580;
+  color:#fff;
+  box-shadow:0 2px 8px rgba(211,49,104,.18);
+}
+#app.light .sales-popup-page .sales-popup-hint{color:#987e8e}
+#app.light .sales-popup-backdrop{background:rgba(45,25,39,.36)}
+#app.light .sales-popup-panel{
+  background:#fffdfd;
+  color:#563648;
+  border:1px solid #f3c9d8;
+  box-shadow:0 16px 40px rgba(75,33,53,.18);
+}
+#app.light .sales-popup-header{color:#643649;border-bottom-color:#efd7e1}
+#app.light .sales-popup-header button{color:#b04770;background:#fff0f6}
+#app.light .sales-popup-scroll .sales-range-nav{color:#644257;border-bottom-color:#f1dce5}
+#app.light .sales-popup-scroll .sales-range-nav > span{color:#947584}
+#app.light .sales-popup-scroll .sales-range-controls button{color:#c83a6d;background:#ffedf4}
+#app.light .sales-popup-scroll .sales-overview{background:#fff3f8;border:1px solid #f5dce5}
+#app.light .sales-popup-scroll .sales-overview .stat{color:#bf3b6a}
+#app.light .sales-popup-scroll .receipts-split > div{background:#fffdfd;border:1px solid #f5e2ea;border-radius:10px}
+#app.light .sales-popup-scroll .receipts-split small{color:#987f8d}
+#app.light .sales-popup-scroll .sales-performance{border-color:#efd5df;background:#fffafe}
+#app.light .sales-popup-scroll .sales-performance > summary{color:#6e455b}
+#app.light .sales-popup-scroll .sales-accordion-body > .section-title{color:#773d58}
+#app.light .sales-popup-scroll .receipt-customer{background:#fff5f9;border:1px solid #f2d8e3}
+#app.light .sales-popup-scroll .receipt-customer summary{color:#57374a}
+#app.light .sales-popup-scroll .receipt-row-date{color:#877482}
+#app.light .sales-popup-scroll .receipt-swipe{border-color:#ecd5df}
+#app.light .sales-popup-scroll .receipt-swipe-main{background:#fffafd}
+/* Payment receipts remain blue and prepaid deductions remain red for clarity. */
