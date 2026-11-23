@@ -1125,3 +1125,56 @@ body > nav.nav{
 .calendar-root .calendar-menu-popup .personal-list-copy small{
   color:#836777;
 }
+
+/* v0.9.6: match appointment SEARCH popup to the light personal-calendar popup.
+   These rules are scoped only to the search modal, not date details. */
+.calendar-root .calendar-popup-backdrop:has(.calendar-popup:not(.calendar-menu-popup)){
+  background:rgba(45,25,39,.36);
+}
+.calendar-root .calendar-popup:not(.calendar-menu-popup){
+  background:#fffdfd;
+  color:#563648;
+  border:1px solid #f3c9d8;
+  box-shadow:0 16px 40px rgba(75,33,53,.18);
+}
+.calendar-root .calendar-popup:not(.calendar-menu-popup) .calendar-popup-title h3{color:#643649}
+.calendar-root .calendar-popup:not(.calendar-menu-popup) .calendar-popup-title button{color:#b04770}
+.calendar-root .calendar-popup:not(.calendar-menu-popup) .search{
+  background:#fff6f9;
+  border:1px solid #efd1dc;
+  color:#563648;
+  border-radius:11px;
+}
+.calendar-root .calendar-popup:not(.calendar-menu-popup) .search::placeholder{color:#ab91a0}
+.calendar-root .calendar-popup:not(.calendar-menu-popup) #searchResults{color:#75646d}
+.calendar-root .calendar-popup:not(.calendar-menu-popup) #searchResults .sub,
+.calendar-root .calendar-popup:not(.calendar-menu-popup) #searchResults .empty{color:#927d89}
+.calendar-root .calendar-popup:not(.calendar-menu-popup) #searchResults .detail-row{
+  background:#fff6f9;
+  border-color:#f0cedb;
+  color:#563648;
+}
+/* Keep the four existing bottom icons and fixed navigation dimensions. */
+body > nav.nav,
+body > nav.nav.dark{
+  background:rgba(255,250,252,.97);
+  border-top:1px solid #f0dbe3;
+  -webkit-backdrop-filter:blur(18px);
+  backdrop-filter:blur(18px);
+  box-shadow:0 -2px 9px rgba(98,55,72,.06);
+}
+body > nav.nav > button{
+  color:#a7959f;
+  background:transparent;
+}
+body > nav.nav > button.active,
+body > nav.nav.dark > button.active{
+  color:#ef4f80;
+}
+body > nav.nav > button > .nav-icon{
+  border-radius:11px;
+}
+body > nav.nav > button.active > .nav-icon{
+  background:rgba(249,109,151,.12);
+  box-shadow:0 0 0 6px rgba(249,109,151,.12);
+}
