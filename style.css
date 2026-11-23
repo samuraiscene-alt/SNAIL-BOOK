@@ -1027,3 +1027,6 @@ body > nav.nav{
 .calendar-root .observance-detail.observance-kr{color:#ff9baa;background:#51222c}
 .calendar-root .observance-detail.observance-world{color:#f1c77e;background:#433723}
 .calendar-root .month-grid .month-cell{min-width:0}
+
+/* v0.9.3: only show nonzero cancellation/no-show counts in client details. */
+.client-detail-dialog .client-detail-stat.client-detail-negative span,.client-detail-dialog .client-detail-stat.client-detail-negative strong{color:#ff8699!important}
