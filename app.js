@@ -97,7 +97,7 @@ function openPersonalEditor(id,date){
   const title=dlg.querySelector('#personalTitle').value.trim();
   const eventDate=dlg.querySelector('#personalDate').value;
   if(!title){alert('일정 제목을 입력해 주세요.');return}
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(eventDate)){alert('날짜를 선택해 주세요.');return}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)){alert('날짜를 선택해 주세요.');return}
   const event={id:existing?.id||uid(),title,type:typeControl.value,date:eventDate,time:timeControl.value||'10:00',
    repeat:dlg.querySelector('#personalRepeat').value};
   const before=JSON.stringify(store);
