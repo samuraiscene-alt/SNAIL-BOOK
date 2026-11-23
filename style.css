@@ -849,3 +849,39 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
  flex:0 0 28px;
  display:block;
 }
+
+/* v0.8.2: keep a single fixed navigation bar OUTSIDE #app's rerendering
+   and scrolling calendar/booking/sales/settings content. */
+body > nav.nav{
+ position:fixed!important;
+ inset:auto 0 0 0!important;
+ bottom:0!important;
+ box-sizing:border-box!important;
+ width:100%!important;
+ height:calc(66px + env(safe-area-inset-bottom,0px))!important;
+ padding:0 0 env(safe-area-inset-bottom,0px)!important;
+ margin:0!important;
+ display:flex!important;
+ flex-direction:row!important;
+ align-items:stretch!important;
+ justify-content:space-around!important;
+ transform:none!important;
+ z-index:100!important;
+}
+body > nav.nav > button{
+ flex:1 1 0;
+ min-width:0;
+ max-width:none;
+ height:66px;
+ padding:0;
+ margin:0;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+}
+body > nav.nav > button > .nav-icon{
+ flex:0 0 28px;
+ width:28px;
+ height:28px;
+ display:block;
+}
