@@ -1178,3 +1178,77 @@ body > nav.nav > button.active > .nav-icon{
   background:rgba(249,109,151,.12);
   box-shadow:0 0 0 6px rgba(249,109,151,.12);
 }
+
+/* v0.9.7: pastel booking registration form only; keep all existing wheels dark. */
+#app.light:has(> .wrap > .form-title){background:#fff7fa;color:#342a33}
+#app.light .wrap:has(> .form-title) > .form-title{color:#913458}
+#app.light .wrap:has(> .form-title) > .form-title .app-version-label{color:#a78c9b}
+#app.light .wrap:has(> .form-title) > .card{
+ background:#fffdfd;
+ border:1px solid #f3d8e2;
+ box-shadow:0 3px 13px rgba(145,66,98,.045);
+}
+#app.light .wrap:has(> .form-title) .card > .field{border-bottom-color:#f1e0e7}
+#app.light .wrap:has(> .form-title) .card > .field:last-child{border-bottom:0}
+#app.light .wrap:has(> .form-title) .field > label,
+#app.light .wrap:has(> .form-title) .card .row > b,
+#app.light .wrap:has(> .form-title) .payment-method-block > b{color:#66384d}
+#app.light .wrap:has(> .form-title) .field input,
+#app.light .wrap:has(> .form-title) .field select,
+#app.light .wrap:has(> .form-title) .field textarea{
+ background:#fff4f8;
+ color:#44303b;
+ border:1px solid #f4e2e9;
+}
+#app.light .wrap:has(> .form-title) .field input::placeholder,
+#app.light .wrap:has(> .form-title) .field textarea::placeholder{color:#ac96a2}
+#app.light .wrap:has(> .form-title) .treatment-gender{
+ background:#fff7fa;
+ border-color:#efd0dc;
+ color:#694858;
+}
+#app.light .wrap:has(> .form-title) .treatment-gender.active{
+ background:#fce1eb;
+ border-color:#f49bb9;
+ color:#ba3e6d;
+}
+#app.light .wrap:has(> .form-title) .treatment-category{
+ background:#fffbfd;
+ border-color:#efd6e0;
+ color:#644255;
+}
+#app.light .wrap:has(> .form-title) .treatment-category.active{
+ background:#ffedf3;
+ border-color:#efa5bd;
+ color:#bd3668;
+}
+#app.light .wrap:has(> .form-title) .treatment-category span:last-child{color:#bc7994}
+#app.light .wrap:has(> .form-title) .selected-treatment{
+ background:#fff1f6;
+ border-color:#efc4d4;
+ color:#77435c;
+}
+#app.light .wrap:has(> .form-title) .payment-switch-option{
+ background:#fff4f8;
+ color:#66384d;
+}
+#app.light .wrap:has(> .form-title) .payment-switch-option input:checked+.payment-switch-track{background:#f35580}
+#app.light .wrap:has(> .form-title) .payment-switch-option input:focus-visible+.payment-switch-track{outline-color:#e94c7e}
+#app.light .wrap:has(> .form-title) .extras-plus{
+ background:#fff0f6;
+ border-color:#f5b2ca!important;
+ color:#ec5684;
+}
+#app.light .wrap:has(> .form-title) .extras-minus{
+ background:#ffebf0;
+ border-color:#f4bbcb!important;
+ color:#c84a72;
+}
+#app.light .wrap:has(> .form-title) .extras-bill-row .plus{color:#d54c7c}
+#app.light .wrap:has(> .form-title) #bookingTotal{color:#d93f75!important}
+#app.light .wrap:has(> .form-title) > button.primary{
+ background:#f35580;
+ color:#fff;
+ box-shadow:0 3px 12px rgba(211,49,104,.14);
+}
+#app.light .wrap:has(> .form-title) > .note{color:#876e7b}
