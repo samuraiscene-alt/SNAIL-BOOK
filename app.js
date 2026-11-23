@@ -770,7 +770,7 @@ function servicesPage(){
  }).join('')+'</div>':'')+
  '</div></div>';
 }
-function openSettingsServiceWheel(){
+function openSettingsServiceWheel(preferredId){
  const gender=settingsGender,category=settingsCategory;
  if(!gender||!category)return;
  const options=store.services.filter(s=>s.gender===gender&&s.category===category);
@@ -783,21 +783,21 @@ function openSettingsServiceWheel(){
  '<div class="wheel-option settings-service-option settings-service-new" hidden><input id="newServiceName" autocomplete="off" placeholder="새 서비스 이름" maxlength="70"></div>'+
  '<div class="wheel-pad"></div></div></div>'+
  '<div class="settings-service-meta"></div>'+
- '<div class="settings-service-actions"><button type="button" class="settings-service-remove" aria-label="선택 서비스 삭제">−</button><button type="button" class="settings-service-add">+</button></div>'+
+ '<div class="settings-service-actions"><button type="button" class="settings-service-remove" aria-label="선택 서비스 삭제">−</button><button type="button" class="settings-service-edit" aria-label="선택 서비스 수정"><svg width="27" height="27" viewBox="0 0 32 32" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" d="M23 17.5V26a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3h9"/><path fill="currentColor" d="m11 22 3.8-.8L27.1 8.9 23.1 4.9 10.8 17.2zM24.3 3.7a2.6 2.6 0 0 1 3.7 0l1.3 1.3a2.6 2.6 0 0 1 0 3.7l-1 1-5-5z"/></svg></button><button type="button" class="settings-service-add">+</button></div>'+
  '<div class="wheel-actions"><button type="button" class="wheel-cancel">취소</button><button type="button" class="wheel-done" aria-label="서비스 관리 닫기">✓</button></div></section>';
  document.body.appendChild(back);
  const y=window.scrollY,prior={position:document.body.style.position,top:document.body.style.top,left:document.body.style.left,right:document.body.style.right,width:document.body.style.width};
  Object.assign(document.body.style,{position:'fixed',top:'-'+y+'px',left:'0',right:'0',width:'100%'});
- const col=back.querySelector('.settings-service-col'),newRow=back.querySelector('.settings-service-new'),input=back.querySelector('#newServiceName'),meta=back.querySelector('.settings-service-meta'),add=back.querySelector('.settings-service-add'),remove=back.querySelector('.settings-service-remove'),done=back.querySelector('.wheel-done');
+ const col=back.querySelector('.settings-service-col'),newRow=back.querySelector('.settings-service-new'),input=back.querySelector('#newServiceName'),meta=back.querySelector('.settings-service-meta'),add=back.querySelector('.settings-service-add'),remove=back.querySelector('.settings-service-remove'),edit=back.querySelector('.settings-service-edit'),done=back.querySelector('.wheel-done');
  let adding=false,idx=0,settle;
  const close=()=>{clearTimeout(settle);back.remove();Object.assign(document.body.style,prior);window.scrollTo(0,y)};
  back.addEventListener('touchmove',e=>{if(!e.target.closest('.settings-service-col')&&!e.target.closest('input'))e.preventDefault()},{passive:false});
  function currentIndex(){return Math.max(0,Math.min(options.length-1,Math.round(col.scrollTop/44)))}
  function refresh(){
-  if(adding){meta.textContent='서비스 이름 입력 후 저장하세요';add.textContent='저장';remove.disabled=true;done.disabled=true;return}
+  if(adding){meta.textContent='서비스 이름 입력 후 저장하세요';add.textContent='저장';remove.disabled=true;edit.disabled=true;done.disabled=true;return}
   idx=currentIndex();const s=options[idx];
   meta.textContent=s?'중앙 서비스 선택 · − 삭제 가능':'등록된 서비스 없음';
-  add.textContent='+';remove.disabled=!s;done.disabled=!s;
+  add.textContent='+';remove.disabled=!s;edit.disabled=!s;done.disabled=!s;
  }
  function beginAdd(){
   adding=true;newRow.hidden=false;input.value='';col.style.scrollSnapType='none';
@@ -822,6 +822,35 @@ function openSettingsServiceWheel(){
   const s=options[target];if(!s)return;
   meta.textContent='선택: '+s.name;
  });
+ edit.onclick=()=>{
+  if(adding)return;
+  const service=options[currentIndex()];if(!service)return;
+  const selectedId=service.id;
+  close();
+  const modal=document.createElement('div');modal.className='settings-service-edit-backdrop';
+  modal.innerHTML='<section class="settings-service-edit-panel" role="dialog" aria-modal="true" aria-label="서비스 수정">'+
+   '<h3>서비스 수정</h3><label>서비스 이름<input id="editServiceName" maxlength="70" value="'+esc(service.name)+'"></label>'+
+   '<label>서비스 가격 (원)<input id="editServicePrice" type="number" min="0" step="1000" inputmode="numeric" value="'+Number(service.price||0)+'"></label>'+
+   '<label>시술 시간 (분)<input id="editServiceMinutes" type="number" min="10" step="10" inputmode="numeric" value="'+Number(service.minutes||60)+'"></label>'+
+   '<div class="settings-service-edit-buttons"><button type="button" class="service-edit-cancel">취소</button><button type="button" class="service-edit-save">저장</button></div></section>';
+  document.body.appendChild(modal);
+  const dismiss=()=>{modal.remove();openSettingsServiceWheel(selectedId)};
+  modal.querySelector('.service-edit-cancel').onclick=dismiss;
+  modal.onclick=e=>{if(e.target===modal)dismiss()};
+  modal.querySelector('.service-edit-save').onclick=()=>{
+   const name=modal.querySelector('#editServiceName').value.trim();
+   const priceValue=modal.querySelector('#editServicePrice').value;
+   const minsValue=modal.querySelector('#editServiceMinutes').value;
+   const price=Number(priceValue),minutes=Number(minsValue);
+   if(!name){alert('서비스 이름을 입력해 주세요.');return}
+   if(store.services.some(x=>x.id!==selectedId&&x.gender===gender&&x.category===category&&x.name===name)){alert('같은 분류에 동일한 서비스가 있습니다.');return}
+   if(priceValue===''||!Number.isFinite(price)||price<0||!Number.isInteger(price)){alert('가격은 0원 이상의 정수로 입력해 주세요.');return}
+   if(minsValue===''||!Number.isInteger(minutes)||minutes<10||minutes>1440){alert('시술 시간은 10~1440분 사이로 입력해 주세요.');return}
+   const original={name:service.name,price:service.price,minutes:service.minutes};
+   try{service.name=name;service.price=price;service.minutes=minutes;save()}catch(error){Object.assign(service,original);alert('서비스 저장에 실패했습니다.');return}
+   modal.remove();render();notify('서비스 수정 완료');openSettingsServiceWheel(selectedId);
+  };
+ };
  add.onclick=()=>{if(adding)finishAdd();else beginAdd()};
  input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();finishAdd()}});
  remove.onclick=()=>{
@@ -837,7 +866,7 @@ function openSettingsServiceWheel(){
  };
  back.querySelector('.wheel-cancel').onclick=close;
  back.addEventListener('click',e=>{if(e.target===back)close()});
- requestAnimationFrame(refresh);
+ requestAnimationFrame(()=>{if(preferredId){const found=options.findIndex(x=>x.id===preferredId);if(found>=0)col.scrollTop=found*44}refresh()});
 }
 function recalcTreatmentEnd(){
   if(!tempForm||editing)return;
