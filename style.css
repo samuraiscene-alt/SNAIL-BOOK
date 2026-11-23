@@ -922,3 +922,8 @@ body > nav.nav{
  margin:0!important;
  transform:none!important;
 }
+
+/* v0.8.5 - visible installed-app version and safe, in-app refresh control. */
+.app-update-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:18px 10px 5px;color:#9095a3;font-size:12px}
+.app-update-line button{border:1px solid #cbd6eb;border-radius:12px;padding:10px 12px;background:#eef3ff;color:#2676e8;font-size:12px;font-weight:750}
+.app-update-line button:disabled{opacity:.6}
