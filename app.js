@@ -40,19 +40,25 @@ const PERSONAL_TYPES={
  custom:{label:'직접 입력',color:'#b394fa'}
 };
 function personalEventsOn(date){
- const monthDay=date.slice(5);
- return (store.personalEvents||[]).filter(e=>e.date===date||(e.repeat==='yearly'&&e.date?.slice(5)===monthDay))
-  .sort((a,b)=>(a.allDay?'00:00':a.time||'00:00').localeCompare(b.allDay?'00:00':b.time||'00:00'));
+ const target=Date.parse(date+'T12:00:00Z');
+ return (store.personalEvents||[]).filter(e=>{
+  if(!e.date||!Number.isFinite(target)||date<e.date)return false;
+  if(e.date===date)return true;
+  const repeat=e.repeat||'none';
+  if(repeat==='weekly')return ((target-Date.parse(e.date+'T12:00:00Z'))/86400000)%7===0;
+  if(repeat==='monthly')return e.date.slice(8)===date.slice(8);
+  if(repeat==='yearly')return e.date.slice(5)===date.slice(5);
+  return false;
+ }).sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
 }
-function personalEventLabel(e){
- return (e.allDay?'종일':e.time||'')+' '+e.title;
-}
+function personalEventLabel(e){return (e.time||'10:00')+' '+e.title}
+function personalRepeatLabel(e){return ({weekly:'매주 반복',monthly:'매월 반복',yearly:'매년 반복'})[e.repeat]||'반복 없음'}
 function personalEventRow(e){
  const type=PERSONAL_TYPES[e.type]||PERSONAL_TYPES.custom;
  return '<button type="button" class="personal-list-row" data-edit-personal="'+esc(e.id)+'">'+
  '<span class="personal-color-pin" style="background:'+type.color+'"></span>'+
  '<span class="personal-list-copy"><strong>'+esc(e.title)+'</strong><small>'+
- esc(e.date)+(e.repeat==='yearly'?' · 매년 반복':'')+' · '+esc(e.allDay?'종일':e.time||'시간 미정')+'</small></span><span>›</span></button>';
+ esc(e.date)+' · '+personalRepeatLabel(e)+' · '+esc(e.time||'10:00')+'</small></span><span>›</span></button>';
 }
 function personalCalendarMenu(){
  const items=(store.personalEvents||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
@@ -67,37 +73,37 @@ function openPersonalEditor(id,date){
  const dlg=document.createElement('div');dlg.className='personal-editor-backdrop';
  const list=Object.entries(PERSONAL_TYPES).map(([k,v])=>
  '<option value="'+k+'"'+(k===type?' selected':'')+'>'+v.label+'</option>').join('');
+ const repeat=existing?.repeat||(!existing&&type==='birthday'?'yearly':'none');
+ const repeats=[['none','반복 없음'],['weekly','매주 반복 (같은 요일)'],['monthly','매월 반복 (같은 날짜)'],['yearly','매년 반복 (같은 월·일)']].map(([val,label])=>
+ '<option value="'+val+'"'+(repeat===val?' selected':'')+'>'+label+'</option>').join('');
  dlg.innerHTML='<section class="personal-editor-dialog" role="dialog" aria-modal="true" aria-label="개인 일정 작성">'+
  '<div class="personal-editor-head"><h3>'+(existing?'개인 일정 수정':'개인 일정 등록')+'</h3><button type="button" data-personal-close aria-label="닫기">×</button></div>'+
  '<label>일정 유형<select id="personalType">'+list+'</select></label>'+
  '<label>제목<input id="personalTitle" maxlength="80" placeholder="일정 제목 입력" value="'+esc(existing?.title||'')+'"></label>'+
  '<div class="personal-editor-two"><label>날짜<input id="personalDate" type="date" value="'+esc(givenDate)+'"></label>'+
  '<label>시작 시간<input id="personalTime" type="time" value="'+esc(existing?.time||'10:00')+'"></label></div>'+
- '<label class="personal-checkline"><input id="personalAllDay" type="checkbox"'+(existing?.allDay?' checked':'')+'> 종일 일정</label>'+
- '<label class="personal-checkline"><input id="personalRepeat" type="checkbox"'+(existing?.repeat==='yearly'||(!existing&&type==='birthday')?' checked':'')+'> 매년 반복 (생일 등)</label>'+
+ '<label>반복 일정<select id="personalRepeat">'+repeats+'</select></label>'+
  '<div class="personal-editor-actions">'+(existing?'<button type="button" class="personal-delete">삭제</button>':'')+
  '<button type="button" class="personal-cancel">취소</button><button type="button" class="personal-save">저장</button></div></section>';
  document.body.appendChild(dlg);
  const prevOverflow=document.body.style.overflow;document.body.style.overflow='hidden';
  const close=()=>{dlg.remove();document.body.style.overflow=prevOverflow};
- const typeControl=dlg.querySelector('#personalType'),allDay=dlg.querySelector('#personalAllDay');
+ const typeControl=dlg.querySelector('#personalType');
  const timeControl=dlg.querySelector('#personalTime');
- const toggleTime=()=>{timeControl.disabled=allDay.checked;timeControl.closest('label').style.opacity=allDay.checked?'.45':'1'};
- toggleTime();allDay.onchange=toggleTime;
- typeControl.onchange=()=>{if(typeControl.value==='birthday'){dlg.querySelector('#personalRepeat').checked=true;allDay.checked=true;toggleTime()}};
+ typeControl.onchange=()=>{if(typeControl.value==='birthday'&&!existing&&dlg.querySelector('#personalRepeat').value==='none')dlg.querySelector('#personalRepeat').value='yearly'};
  dlg.querySelector('[data-personal-close]').onclick=close;dlg.querySelector('.personal-cancel').onclick=close;
  dlg.onclick=e=>{if(e.target===dlg)close()};
  dlg.querySelector('.personal-save').onclick=()=>{
   const title=dlg.querySelector('#personalTitle').value.trim();
   const eventDate=dlg.querySelector('#personalDate').value;
   if(!title){alert('일정 제목을 입력해 주세요.');return}
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)){alert('날짜를 선택해 주세요.');return}
-  const e={id:existing?.id||uid(),title,type:typeControl.value,date:eventDate,time:timeControl.value||'10:00',
-   allDay:allDay.checked,repeat:dlg.querySelector('#personalRepeat').checked?'yearly':'none'};
+  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(eventDate)){alert('날짜를 선택해 주세요.');return}
+  const event={id:existing?.id||uid(),title,type:typeControl.value,date:eventDate,time:timeControl.value||'10:00',
+   repeat:dlg.querySelector('#personalRepeat').value};
   const before=JSON.stringify(store);
   try{
-   if(existing){const idx=store.personalEvents.findIndex(x=>x.id===existing.id);if(idx<0)throw Error('not found');store.personalEvents[idx]=e}
-   else store.personalEvents.push(e);
+   if(existing){const idx=store.personalEvents.findIndex(x=>x.id===existing.id);if(idx<0)throw Error('not found');store.personalEvents[idx]=event}
+   else store.personalEvents.push(event);
    save();
   }catch(err){store=JSON.parse(before);alert('일정 저장 실패. 다시 시도해 주세요.');return}
   close();panel=null;selected=eventDate;cursor=dateOf(selected);render();notify('개인 일정 저장 완료');
@@ -133,7 +139,7 @@ function timeGrid(){
   return '<button type="button" class="event '+(isWeek?'week-event':'day-event')+(b.status==='paid'?' paid':'')+
    '" data-edit="'+b.id+'" style="top:'+top+'px">'+
    '<span class="event-heading"><strong class="event-time">'+esc(startText)+'</strong> <strong class="event-client">'+esc(clientName(b))+'</strong> <span class="event-service">'+esc(serviceNames(b))+'</span></span></button>';
- }).join('')+personalEventsOn(d).map(e=>{const type=PERSONAL_TYPES[e.type]||PERSONAL_TYPES.custom;const start=e.allDay?'00:00':e.time||'10:00';const top=(mins(start)-first*60)/60*unit;return '<button type="button" class="event personal-event" data-edit-personal="'+esc(e.id)+'" style="top:'+top+'px;border-left-color:'+type.color+'"><strong>'+esc(e.allDay?'종일':start)+'</strong> '+esc(e.title)+'</button>'}).join('')+'</div>').join('');
+ }).join('')+personalEventsOn(d).map(e=>{const type=PERSONAL_TYPES[e.type]||PERSONAL_TYPES.custom;const start=e.time||'10:00';const top=(mins(start)-first*60)/60*unit;return '<button type="button" class="event personal-event" data-edit-personal="'+esc(e.id)+'" style="top:'+top+'px;border-left-color:'+type.color+'"><strong>'+esc(start)+'</strong> '+esc(e.title)+'</button>'}).join('')+'</div>').join('');
  return head+'<div class="calendar-grid-wrap '+(isWeek?'week-schedule':'day-schedule')+'" style="--schedule-unit:'+unit+'px">'+
  '<div class="hour-labels">'+labels+'</div>'+
  '<div class="schedule-area" style="height:'+(last-first)*unit+'px">'+
@@ -1407,7 +1413,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=087',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=088',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
