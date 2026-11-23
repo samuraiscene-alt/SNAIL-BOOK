@@ -42,7 +42,7 @@ const PERSONAL_TYPES={
 function personalEventsOn(date){
  const target=Date.parse(date+'T12:00:00Z');
  return (store.personalEvents||[]).filter(e=>{
-  if(!e.date||!Number.isFinite(target)||date<e.date)return false;
+  if(!e.date||!Number.isFinite(target)||date<e.date||(Array.isArray(e.excludedDates)&&e.excludedDates.includes(date)))return false;
   if(e.date===date)return true;
   const repeat=e.repeat||'none';
   if(repeat==='weekly')return ((target-Date.parse(e.date+'T12:00:00Z'))/86400000)%7===0;
@@ -53,12 +53,12 @@ function personalEventsOn(date){
 }
 function personalEventLabel(e){return (e.time||'10:00')+' '+e.title}
 function personalRepeatLabel(e){return ({weekly:'매주 반복',monthly:'매월 반복',yearly:'매년 반복'})[e.repeat]||'반복 없음'}
-function personalEventRow(e){
+function personalEventRow(e,occurrenceDate){
  const type=PERSONAL_TYPES[e.type]||PERSONAL_TYPES.custom;
- return '<button type="button" class="personal-list-row" data-edit-personal="'+esc(e.id)+'">'+
+ return '<button type="button" class="personal-list-row" data-edit-personal="'+esc(e.id)+'" data-occurrence-date="'+esc(occurrenceDate||e.date)+'">'+
  '<span class="personal-color-pin" style="background:'+type.color+'"></span>'+
  '<span class="personal-list-copy"><strong>'+esc(e.title)+'</strong><small>'+
- esc(e.date)+' · '+personalRepeatLabel(e)+' · '+esc(e.time||'10:00')+'</small></span><span>›</span></button>';
+ esc(occurrenceDate||e.date)+' · '+personalRepeatLabel(e)+' · '+esc(e.time||'10:00')+'</small></span><span>›</span></button>';
 }
 function personalCalendarMenu(){
  const items=(store.personalEvents||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,30);
@@ -68,7 +68,8 @@ function personalCalendarMenu(){
 }
 function openPersonalEditor(id,date){
  const existing=(store.personalEvents||[]).find(e=>e.id===id);
- const state={date:existing?.date||date||selected,time:existing?.time||'10:00',repeat:existing?.repeat||(!existing&&existing?.type==='birthday'?'yearly':'none')};
+ const state={date:existing?.date||date||selected,time:existing?.time||'10:00',repeat:existing?.repeat||'none'};
+ const occurrenceDate=existing&&date&&date>=existing.date?date:existing?.date||date||selected;
  const dlg=document.createElement('div');dlg.className='personal-editor-backdrop';
  const type=existing?.type||'schedule';
  const list=Object.entries(PERSONAL_TYPES).map(([k,v])=>'<option value="'+k+'"'+(k===type?' selected':'')+'>'+v.label+'</option>').join('');
@@ -196,6 +197,7 @@ function openPersonalEditor(id,date){
   if(!title){alert('일정 제목을 입력해 주세요.');return}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(eventDate)){alert('날짜를 선택해 주세요.');return}
   const event={id:existing?.id||uid(),title,type:typeControl.value,date:eventDate,time:state.time,repeat:state.repeat};
+  if(existing&&Array.isArray(existing.excludedDates))event.excludedDates=existing.excludedDates.slice();
   const before=JSON.stringify(store);
   try{
    if(existing){const idx=store.personalEvents.findIndex(x=>x.id===existing.id);if(idx<0)throw Error('not found');store.personalEvents[idx]=event}
@@ -205,9 +207,37 @@ function openPersonalEditor(id,date){
   close();panel=null;selected=eventDate;cursor=dateOf(selected);render();notify('개인 일정 저장 완료');
  };
  if(existing)dlg.querySelector('.personal-delete').onclick=()=>{
-  if(!confirm('이 개인 일정을 삭제할까요?'))return;
-  store.personalEvents=store.personalEvents.filter(e=>e.id!==existing.id);
-  save();close();panel=null;render();notify('일정 삭제 완료');
+  if(document.querySelector('.personal-delete-choice'))return;
+  const remove=(justOne)=>{
+   const before=JSON.stringify(store);
+   try{
+    const idx=store.personalEvents.findIndex(e=>e.id===existing.id);
+    if(idx<0)throw Error('일정 없음');
+    if(justOne){
+     const current=store.personalEvents[idx];
+     current.excludedDates=Array.from(new Set([...(current.excludedDates||[]),occurrenceDate])).sort();
+    }else store.personalEvents.splice(idx,1);
+    save();
+   }catch(err){store=JSON.parse(before);alert('삭제에 실패했습니다. 다시 시도해 주세요.');return}
+   close();panel=null;render();notify(justOne?'선택한 날짜의 일정 삭제 완료':'반복 일정 전체 삭제 완료');
+  };
+  if(existing.repeat==='none'||!existing.repeat){
+   if(confirm('이 개인 일정을 삭제할까요?'))remove(false);
+   return;
+  }
+  const choice=document.createElement('div');
+  choice.className='personal-delete-choice';
+  choice.innerHTML='<section class="personal-delete-panel" role="dialog" aria-modal="true" aria-label="반복 일정 삭제 범위 선택">'+
+   '<h3>반복 일정 삭제</h3><p>'+esc(occurrenceDate)+' 일정은 어떻게 삭제할까요?</p>'+
+   '<button type="button" class="personal-delete-once">이 일정만 삭제</button>'+
+   '<button type="button" class="personal-delete-all">전체 반복 일정 삭제</button>'+
+   '<button type="button" class="personal-delete-abort">취소</button></section>';
+  document.body.appendChild(choice);
+  const dismiss=()=>choice.remove();
+  choice.querySelector('.personal-delete-abort').onclick=dismiss;
+  choice.onclick=e=>{if(e.target===choice)dismiss()};
+  choice.querySelector('.personal-delete-once').onclick=()=>{dismiss();remove(true)};
+  choice.querySelector('.personal-delete-all').onclick=()=>{dismiss();remove(false)};
  };
 }
 function serviceNames(b){return (b.items||[]).map(i=>i.name).join(' · ')||'시술 미선택'}
@@ -220,7 +250,7 @@ function heading(){const anchor=view==='month'?`${cursor.getFullYear()}년 ${cur
 function weekStart(d){const day=dateOf(d).getDay();return shift(d,-((day+6)%7))}
 function calendarPage(){let html=`<div class="wrap"><div class="calendar-top"><button class="round-dark" data-panel="menu" aria-label="개인 일정 관리">≡</button><button class="round-dark" data-panel="search" aria-label="검색">⌕</button></div><div class="segment dark">${['month','week','day'].map((v,i)=>`<button data-view="${v}" class="${view===v?'active':''}">${['월간','주간','일간'][i]}</button>`).join('')}</div>${heading()}`;if(view==='month')html+=monthGrid();else html+=timeGrid();if(panel==='search')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup" role="dialog" aria-modal="true" aria-label="예약 검색"><div class="calendar-popup-title"><h3>예약 검색</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div><input id="calSearch" class="search" placeholder="고객 이름 검색" value="${esc(search)}"><div id="searchResults">${searchResults()}</div></section></div>`;if(panel==='menu')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup calendar-menu-popup" role="dialog" aria-modal="true" aria-label="개인 일정 관리"><div class="calendar-popup-title"><h3>개인 일정 관리</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div>${personalCalendarMenu()}</section></div>`;if(panel==='appointments')html+=`<div class="appointment-backdrop" data-close-appointments="1"><section class="appointment-modal" role="dialog" aria-modal="true" aria-label="${dateTitle(selected)} 예약 상세"><button class="modal-close" data-close-appointments="1" aria-label="닫기">×</button>${dayDetail(selected)}</section></div>`;return html+'</div>'}
 function monthGrid(){const first=new Date(cursor.getFullYear(),cursor.getMonth(),1);const offset=(first.getDay()+6)%7;const count=Math.ceil((offset+new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate())/7)*7;const start=new Date(first);start.setDate(1-offset);let html='<div class="weeknames">'+['월','화','수','목','금','토','일'].map(v=>`<span>${v}</span>`).join('')+'</div><div class="month-grid">';for(let i=0;i<count;i++){let d=new Date(start);d.setDate(d.getDate()+i);let s=localDate(d),list=visibleBookings(s),out=d.getMonth()!==cursor.getMonth();html+=`<div class="month-cell ${s===selected?'sel':''}" data-date="${s}"><span class="day-num ${out?'outside':''} ${d.getDay()===0?'sun':''} ${s===localDate(new Date())?'today':''}">${d.getDate()}</span>${list.length?`<div class="day-count">${list.length}명</div>`:''}${list.slice(0,2).map(b=>`<div class="mini-book">${esc(b.start)}</div>`).join('')}${list.length>2?`<div class="plus-count">+${list.length-2}</div>`:''}${personalEventsOn(s).slice(0,2).map(e=>`<div class="mini-personal" style="border-color:${PERSONAL_TYPES[e.type]?.color||'#b394fa'}">${esc(e.title)}</div>`).join('')}</div>`}html+='</div>';return html}
-function dayDetail(d){let bs=visibleBookings(d);return `<div class="detail"><h3>${dateTitle(d)} 예약 · ${bs.length}명</h3>${bs.length?bs.map(b=>`<button class="detail-row" data-edit="${b.id}"><span class="time-col">${b.start}–${b.end}</span><span><b>${esc(clientName(b))}</b><div class="sub">${esc(serviceNames(b))} · ${b.status==='paid'?'완료':b.status==='done'?'시술 완료 · 미정산':b.status==='noshow'?'노쇼':'예약'}</div></span><span style="margin-left:auto">›</span></button>`).join(''):'<div class="empty">예약 없음</div>'}<h3 class="personal-detail-title">개인 일정 · ${personalEventsOn(d).length}건</h3>${personalEventsOn(d).map(personalEventRow).join('')}<button type="button" class="personal-add" data-add-personal="${d}">＋ 이 날짜에 일정 추가</button></div>`}
+function dayDetail(d){let bs=visibleBookings(d);return `<div class="detail"><h3>${dateTitle(d)} 예약 · ${bs.length}명</h3>${bs.length?bs.map(b=>`<button class="detail-row" data-edit="${b.id}"><span class="time-col">${b.start}–${b.end}</span><span><b>${esc(clientName(b))}</b><div class="sub">${esc(serviceNames(b))} · ${b.status==='paid'?'완료':b.status==='done'?'시술 완료 · 미정산':b.status==='noshow'?'노쇼':'예약'}</div></span><span style="margin-left:auto">›</span></button>`).join(''):'<div class="empty">예약 없음</div>'}<h3 class="personal-detail-title">개인 일정 · ${personalEventsOn(d).length}건</h3>${personalEventsOn(d).map(e=>personalEventRow(e,d)).join('')}<button type="button" class="personal-add" data-add-personal="${d}">＋ 이 날짜에 일정 추가</button></div>`}
 function timeGrid(){
  const isWeek=view==='week',start=isWeek?weekStart(selected):selected;
  const days=isWeek?Array.from({length:7},(_,i)=>shift(start,i)):[selected];
@@ -234,7 +264,7 @@ function timeGrid(){
   return '<button type="button" class="event '+(isWeek?'week-event':'day-event')+(b.status==='paid'?' paid':'')+
    '" data-edit="'+b.id+'" style="top:'+top+'px">'+
    '<span class="event-heading"><strong class="event-time">'+esc(startText)+'</strong> <strong class="event-client">'+esc(clientName(b))+'</strong> <span class="event-service">'+esc(serviceNames(b))+'</span></span></button>';
- }).join('')+personalEventsOn(d).map(e=>{const type=PERSONAL_TYPES[e.type]||PERSONAL_TYPES.custom;const start=e.time||'10:00';const top=(mins(start)-first*60)/60*unit;return '<button type="button" class="event personal-event" data-edit-personal="'+esc(e.id)+'" style="top:'+top+'px;border-left-color:'+type.color+'"><strong>'+esc(start)+'</strong> '+esc(e.title)+'</button>'}).join('')+'</div>').join('');
+ }).join('')+personalEventsOn(d).map(e=>{const type=PERSONAL_TYPES[e.type]||PERSONAL_TYPES.custom;const start=e.time||'10:00';const top=(mins(start)-first*60)/60*unit;return '<button type="button" class="event personal-event" data-edit-personal="'+esc(e.id)+'" data-occurrence-date="'+esc(d)+'" style="top:'+top+'px;border-left-color:'+type.color+'"><strong>'+esc(start)+'</strong> '+esc(e.title)+'</button>'}).join('')+'</div>').join('');
  return head+'<div class="calendar-grid-wrap '+(isWeek?'week-schedule':'day-schedule')+'" style="--schedule-unit:'+unit+'px">'+
  '<div class="hour-labels">'+labels+'</div>'+
  '<div class="schedule-area" style="height:'+(last-first)*unit+'px">'+
@@ -1112,7 +1142,7 @@ async function refreshInstalledApp(){
    if(reg)await reg.update();
   }
   const req=new URL('./index.html',window.location.href);
-  req.searchParams.set('v','087');
+  req.searchParams.set('v','090');
   req.searchParams.set('refresh',String(Date.now()));
   window.location.replace(req.toString());
  }catch(err){
@@ -1121,7 +1151,7 @@ async function refreshInstalledApp(){
  }
 }
 
-function bind(){root.querySelectorAll('[data-add-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(null,e.dataset.addPersonal));root.querySelectorAll('[data-edit-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(e.dataset.editPersonal));bindReceiptSwipes();bindSalesPopupScroll();bindScheduleScroll();root.querySelector('[data-refresh-app]')?.addEventListener('click',refreshInstalledApp);document.querySelectorAll('body > nav.nav [data-tab]').forEach(e=>e.onclick=()=>{if(tab===e.dataset.tab)return;tab=e.dataset.tab;panel=null;salesPopupPeriod=null;editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];render();root.scrollTop=0;window.scrollTo(0,0)});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel='appointments';render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{earlyFinishAuthorized=false;editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelectorAll('[data-treatment-gender]').forEach(el=>el.onclick=()=>{captureForm();const g=el.dataset.treatmentGender;treatmentGender=treatmentGender===g?null:g;treatmentCategory=null;render();restoreForm()});
+function bind(){root.querySelectorAll('[data-add-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(null,e.dataset.addPersonal));root.querySelectorAll('[data-edit-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(e.dataset.editPersonal,e.dataset.occurrenceDate));bindReceiptSwipes();bindSalesPopupScroll();bindScheduleScroll();root.querySelector('[data-refresh-app]')?.addEventListener('click',refreshInstalledApp);document.querySelectorAll('body > nav.nav [data-tab]').forEach(e=>e.onclick=()=>{if(tab===e.dataset.tab)return;tab=e.dataset.tab;panel=null;salesPopupPeriod=null;editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];render();root.scrollTop=0;window.scrollTo(0,0)});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel='appointments';render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{earlyFinishAuthorized=false;editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelectorAll('[data-treatment-gender]').forEach(el=>el.onclick=()=>{captureForm();const g=el.dataset.treatmentGender;treatmentGender=treatmentGender===g?null:g;treatmentCategory=null;render();restoreForm()});
 root.querySelectorAll('[data-treatment-category]').forEach(el=>el.onclick=()=>{captureForm();treatmentCategory=el.dataset.treatmentCategory;render();restoreForm();openTreatmentWheel()});root.querySelectorAll('[data-treatment-remove]').forEach(e=>e.onclick=()=>{captureForm();checkedServices=checkedServices.filter(id=>id!==e.dataset.treatmentRemove);recalcTreatmentEnd();render();restoreForm()});root.querySelectorAll('[data-add-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.push({name:'',amount:0});render();restoreForm()});root.querySelectorAll('[data-remove-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.splice(+e.dataset.removeExtra,1);render();restoreForm()});const payCard=root.querySelector('#payCard'),payCash=root.querySelector('#payCash');
 if(payCard&&payCash){
  const preview=()=>{const label=root.querySelector('#bookingTotal');if(label&&checkedServices.includes(BROW_PASS_BUY))label.textContent=money(bookingAmountNow()+(payCard.checked?10000:0))};
@@ -1508,7 +1538,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=089',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=090',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
