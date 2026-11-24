@@ -1,4 +1,4 @@
-const CACHE='snail-book-v109-20261124';
+const CACHE='snail-book-v110-20261124';
 const ASSETS=['./','./index.html','./style.css','./app.js','./manifest.webmanifest','./version.json','./icon-180.png?v=100','./icon-192.png?v=100','./icon-512.png?v=100'];
 self.addEventListener('install',e=>{
  e.waitUntil((async()=>{
