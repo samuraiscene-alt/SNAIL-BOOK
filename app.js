@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='1.0.3';
+const APP_VERSION='1.0.4';
 const KEY='snailbook_v1_store';
 const base={clients:[],services:[{id:'s1',name:'젤네일',price:50000,minutes:60},{id:'s2',name:'젤 제거',price:10000,minutes:30},{id:'s3',name:'네일아트',price:70000,minutes:90},{id:'s4',name:'기본 케어',price:30000,minutes:45}],bookings:[],personalEvents:[],settings:{open:'10:00',close:'20:00',interval:30,closedDays:[0]}};
 function clone(o){return JSON.parse(JSON.stringify(o))}function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.bookings)&&Array.isArray(x.clients)&&Array.isArray(x.services))return {...clone(base),...x,settings:{...base.settings,...x.settings}}}catch(e){}return clone(base)}
@@ -29,7 +29,7 @@ function repairFutureCompletedBookings(){
  });
  store[marker]=true;save();
 }
-function uid(){return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)}function save(){localStorage.setItem(KEY,JSON.stringify(store))}function notify(t){let e=document.querySelector('.toast');if(e)e.remove();e=document.createElement('div');e.className='toast';e.innerHTML='<div class="ok">✓</div>'+esc(t);document.body.append(e);clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.remove(),1800)}
+function uid(){return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,8)}function save(){localStorage.setItem(KEY,JSON.stringify(store));cloudScheduleSave()}function notify(t){let e=document.querySelector('.toast');if(e)e.remove();e=document.createElement('div');e.className='toast';e.innerHTML='<div class="ok">✓</div>'+esc(t);document.body.append(e);clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.remove(),1800)}
 function findClient(id){return store.clients.find(c=>c.id===id)}function priceFor(b){const subtotal=(b.items||[]).reduce((a,x)=>a+Number(x.price||0),0);return Math.max(0,subtotal+(b.extras||[]).reduce((a,x)=>a+(Number.isFinite(Number(x.amount))?Number(x.amount):0),0))}
 function visibleBookings(d){return store.bookings.filter(b=>b.date===d&&b.status!=='cancelled').sort((a,b)=>a.start.localeCompare(b.start))}
 
@@ -874,7 +874,151 @@ async function googleSyncBookings(){
  finally{googleBusy=false;render()}
 }
 
-function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.3</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
+
+/* v1.0.4 Family-only 2-device cloud mode. No server writes until explicitly enabled. */
+const CLOUD_URL='https://jiqcdbandxletnqpdkaj.supabase.co';
+const CLOUD_KEY="sb_publishable_IYFrIGO5hYnucIHprJQEGQ_bae42Jl7";
+const CLOUD_ENABLED_KEY='snailbook_family_cloud_enabled_v1';
+let cloudClient=null,cloudUser=null,cloudEnabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='yes';
+let cloudRevision=0,cloudBusy=false,cloudConflict=false,cloudDirty=false,cloudTimer=null,cloudPolling=null,cloudMessage='연결 확인 중';
+function cloudStatus(){return !cloudUser?'로그인 전':cloudConflict?'수정 충돌 · 백업 후 서버 자료 확인':!cloudEnabled?'로그인됨 · 공유 시작 전':cloudBusy?'서버 저장 중':cloudDirty?'저장 대기 중':cloudMessage}
+function cloudClientReady(){
+ if(!cloudClient&&window.supabase?.createClient){
+  cloudClient=window.supabase.createClient(CLOUD_URL,CLOUD_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+ }
+ return cloudClient;
+}
+function cloudSafeSnapshot(state){const out=clone(state);delete out.googleSyncEvents;return out}
+function cloudAdopt(state,revision){
+ if(!state||!Array.isArray(state.bookings)||!Array.isArray(state.clients)||!Array.isArray(state.services))throw Error('서버 데이터 형식을 확인할 수 없습니다.');
+ // Account-local Google event IDs are intentionally not copied to a different device.
+ const localGoogle=store.googleSyncEvents;
+ store={...clone(base),...clone(state),settings:{...base.settings,...state.settings}};
+ if(localGoogle)store.googleSyncEvents=localGoogle;
+ localStorage.setItem(KEY,JSON.stringify(store));
+ cloudRevision=Number(revision)||1;cloudDirty=false;cloudConflict=false;cloudMessage='동기화 완료';render();
+}
+async function cloudFetchRow(){
+ if(!cloudClientReady()||!cloudUser)throw Error('로그인이 필요합니다.');
+ const {data,error}=await cloudClient.from('snail_shop_state').select('state,revision').eq('owner_id',cloudUser.id).maybeSingle();
+ if(error)throw error;return data;
+}
+function cloudScheduleSave(){
+ if(!cloudEnabled||!cloudUser||cloudConflict)return;
+ cloudDirty=true;cloudMessage='저장 대기 중';
+ clearTimeout(cloudTimer);cloudTimer=setTimeout(cloudFlush,450);
+}
+async function cloudFlush(){
+ if(!cloudEnabled||!cloudUser||!cloudDirty||cloudBusy||cloudConflict||!cloudRevision)return;
+ cloudBusy=true;
+ const snapshot=cloudSafeSnapshot(store);
+ const revision=cloudRevision;
+ try{
+  const {data,error}=await cloudClient.rpc('snail_replace_state',{expected_revision:revision,next_state:snapshot});
+  if(error)throw error;
+  if(!Number(data)){cloudConflict=true;cloudMessage='다른 폰에서 먼저 수정함';alert('두 아이폰의 수정이 충돌했습니다.\n이 폰의 변경 사항은 로컬에 남아 있습니다.\n백업 후 설정 → 두 아이폰 공유에서 확인해 주세요.');return;}
+  cloudRevision=Number(data);cloudDirty=JSON.stringify(cloudSafeSnapshot(store))!==JSON.stringify(snapshot);
+  cloudMessage=cloudDirty?'추가 변경 저장 대기':'서버 저장 완료';
+ }catch(e){cloudDirty=true;cloudMessage='인터넷 연결 또는 서버 저장 오류';}
+ finally{
+  cloudBusy=false;
+  if(cloudDirty&&!cloudConflict&&navigator.onLine){
+   clearTimeout(cloudTimer);cloudTimer=setTimeout(cloudFlush,2500);
+  }
+ }
+}
+async function cloudCheckRemote(){
+ if(!cloudEnabled||!cloudUser||cloudBusy||cloudDirty||cloudConflict||document.hidden)return;
+ try{
+  const remote=await cloudFetchRow();
+  if(remote&&Number(remote.revision)>cloudRevision)cloudAdopt(remote.state,remote.revision);
+ }catch(e){cloudMessage='서버 확인 실패 · 인터넷 점검';}
+}
+async function cloudBootstrap(){
+ if(!cloudClientReady()){cloudMessage='연결 모듈 로딩 실패';return}
+ try{
+  const {data,error}=await cloudClient.auth.getUser();
+  if(error&&!/session/i.test(error.message||''))throw error;
+  cloudUser=data?.user||null;
+  if(cloudUser&&cloudEnabled){
+   const remote=await cloudFetchRow();
+   if(remote)cloudAdopt(remote.state,remote.revision);
+   else{cloudEnabled=false;localStorage.removeItem(CLOUD_ENABLED_KEY);cloudMessage='서버 자료가 없습니다. 공유 시작을 선택하세요';}
+  }
+  if(!cloudPolling)cloudPolling=setInterval(cloudCheckRemote,12000);
+  if(tab==='settings')render();
+ }catch(e){cloudMessage='로그인 또는 네트워크 확인 필요'}
+}
+function cloudPanel(){
+ const logged=!!cloudUser;
+ return '<div class="wrap cloud-panel">'+panelHead('두 아이폰 데이터 공유')+
+ '<div class="card"><strong>현재 상태: '+esc(cloudStatus())+'</strong>'+
+ '<p class="note">가게폰과 개인폰에서 동일한 앱 계정으로 로그인하세요. Supabase 별도 가입은 필요 없습니다.</p>'+
+ (logged?'<p class="muted">로그인: '+esc(cloudUser.email||'가족 계정')+'</p>'+
+ '<button class="ghost" type="button" data-cloud-logout>로그아웃</button>':
+ '<label for="cloudEmail">앱 로그인 이메일</label><input id="cloudEmail" type="email" autocomplete="username" placeholder="이메일">'+
+ '<label for="cloudPassword">앱 비밀번호</label><input id="cloudPassword" type="password" autocomplete="current-password" placeholder="비밀번호">'+
+ '<button class="primary" type="button" data-cloud-login>로그인</button>'+
+ '<p class="note">이 계정은 개발자가 Supabase에서 한 번 만들어 줍니다. 가족이 Supabase 사이트에 가입할 필요는 없습니다.</p>')+
+ '</div>'+
+ (logged?'<div class="card"><b>최초 공유 설정</b>'+
+ '<p class="note">처음 사용하는 가게폰에서는 공유 데이터를 만들고, 두 번째 개인폰에서는 기존 공유 데이터를 가져오세요. 이미 공유 중인 경우 기존 서버 데이터를 우선 사용합니다.</p>'+
+ (!cloudEnabled?'<button type="button" class="primary" data-cloud-start>이 폰 자료로 공유 시작</button>'+
+ '<button type="button" class="ghost" data-cloud-join>기존 공유 자료 가져오기</button>':
+ '<p class="note">동기화가 활성화되어 있습니다. 저장 후 다른 폰에 보이기까지 최대 약 12초 걸릴 수 있습니다.</p>'+
+ '<button type="button" class="ghost" data-cloud-check>지금 서버 확인</button>')+
+ (cloudConflict?'<p class="note">이 폰과 서버에서 동시에 수정한 기록이 있습니다. 반드시 전체 백업 후 서버 데이터로 돌아가세요.</p><button type="button" class="ghost" data-cloud-resolve>서버 자료 다시 불러오기 (내 미전송 변경 덮어쓰기)</button>':'')+
+ '</div>':'')+
+ '<div class="card"><b>데이터 보호</b><p class="note">고객·예약·회원권·매출·설정을 공유합니다. 기존 로컬 자료는 최초 연결 전까지 유지됩니다. 중요한 변경 전에는 전체 백업을 권장합니다.</p>'+
+ '<button type="button" class="ghost" data-cloud-backup>백업 화면 열기</button></div></div>';
+}
+async function cloudLogin(){
+ const email=root.querySelector('#cloudEmail')?.value.trim(),password=root.querySelector('#cloudPassword')?.value;
+ if(!email||!password){alert('앱 계정 이메일과 비밀번호를 입력하세요.');return}
+ if(!cloudClientReady()){alert('네트워크 연결을 확인해 주세요.');return}
+ const {data,error}=await cloudClient.auth.signInWithPassword({email,password});
+ if(error){alert('로그인 실패: '+error.message);return}
+ cloudUser=data.user;cloudMessage='로그인됨 · 공유 시작 전';render();notify('앱 로그인 완료');
+}
+async function cloudLogout(){
+ if(cloudDirty||cloudBusy||cloudConflict){alert('미전송 변경 사항이 있습니다. 먼저 백업과 동기화 상태를 확인하세요.');return}
+ if(!confirm('이 기기에서 로그아웃할까요?'))return;
+ await cloudClient?.auth.signOut();
+ cloudUser=null;cloudEnabled=false;cloudRevision=0;cloudMessage='로그아웃';
+ localStorage.removeItem(CLOUD_ENABLED_KEY);render();
+}
+async function cloudStart(){
+ if(cloudEnabled||!cloudUser)return;
+ const hasData=store.bookings.length||store.clients.length||(store.personalEvents||[]).length;
+ const msg='이 기기 자료를 가족 공유 서버의 최초 데이터로 등록합니다.\n'+(hasData?'이 기기에 등록된 자료가 포함됩니다. 실사용 자료인지 확인하세요.':'현재 예약/고객 자료는 없습니다.')+'\n기존 서버 자료가 있으면 절대 덮어쓰지 않습니다. 계속할까요?';
+ if(!confirm(msg))return;
+ try{
+  const remote=await cloudFetchRow();
+  if(remote){alert('이미 공유 서버 자료가 있습니다. 기존 공유 자료 가져오기를 사용하세요.');return}
+  const {data,error}=await cloudClient.from('snail_shop_state').insert({owner_id:cloudUser.id,state:cloudSafeSnapshot(store),revision:1}).select('revision').single();
+  if(error)throw error;
+  cloudRevision=Number(data.revision);cloudEnabled=true;cloudDirty=false;cloudMessage='공유 시작 완료';
+  localStorage.setItem(CLOUD_ENABLED_KEY,'yes');render();notify('가족 공유 시작 완료');
+ }catch(e){alert('공유 시작 실패: '+e.message+'\n이 폰의 로컬 데이터는 그대로입니다.')}
+}
+async function cloudJoin(){
+ if(!cloudUser||cloudEnabled)return;
+ try{
+  const remote=await cloudFetchRow();
+  if(!remote){alert('공유된 자료가 아직 없습니다. 가게폰에서 먼저 공유 시작을 진행하세요.');return}
+  if(!confirm('서버의 가족 공유 자료를 이 폰으로 가져올까요?\n현재 폰에 있던 별도 예약·고객 기록은 대체됩니다.\n필요하면 먼저 전체 백업을 해주세요.'))return;
+  cloudAdopt(remote.state,remote.revision);cloudEnabled=true;localStorage.setItem(CLOUD_ENABLED_KEY,'yes');
+  cloudMessage='공유 연결 완료';render();notify('가족 공유 연결 완료');
+ }catch(e){alert('공유 자료 가져오기 실패: '+e.message)}
+}
+async function cloudResolve(){
+ if(!cloudUser||!cloudConflict)return;
+ if(!confirm('이 기기에 저장된 미전송 수정은 서버 자료로 대체됩니다.\n반드시 먼저 JSON 백업을 했나요?'))return;
+ const remote=await cloudFetchRow();if(!remote){alert('서버 자료가 없습니다.');return}
+ cloudAdopt(remote.state,remote.revision);notify('서버 자료 불러오기 완료');
+}
+
+function settingsPage(){if(panel==='cloud')return cloudPanel();if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['cloud','두 아이폰 데이터 공유'],['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.4</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
 
 function resetPage(){
  const rows=[
@@ -1367,6 +1511,13 @@ async function refreshInstalledApp(){
 
 
 function bind(){
+ root.querySelector('[data-cloud-login]')?.addEventListener('click',cloudLogin);
+ root.querySelector('[data-cloud-logout]')?.addEventListener('click',cloudLogout);
+ root.querySelector('[data-cloud-start]')?.addEventListener('click',cloudStart);
+ root.querySelector('[data-cloud-join]')?.addEventListener('click',cloudJoin);
+ root.querySelector('[data-cloud-check]')?.addEventListener('click',async()=>{await cloudCheckRemote();render();notify('서버 확인 완료')});
+ root.querySelector('[data-cloud-resolve]')?.addEventListener('click',cloudResolve);
+ root.querySelector('[data-cloud-backup]')?.addEventListener('click',()=>{panel='backup';render()});
  root.querySelector('[data-google-save]')?.addEventListener('click',googleSaveClientId);
  root.querySelector('[data-google-connect]')?.addEventListener('click',googleConnect);
  root.querySelector('[data-google-sync]')?.addEventListener('click',googleSyncBookings);
@@ -1757,7 +1908,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=103',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=104',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
