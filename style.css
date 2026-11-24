@@ -1473,3 +1473,10 @@ body > nav.nav > button.active > .nav-icon{
 #app.light .booking-completion-inner .booking-finish-button{width:calc(100% - 24px);margin:6px 12px 0;background:#f35580;font-size:18px;min-height:50px}
 #app.light .booking-optional-hint{font-size:14px;color:#825d71;line-height:1.65;margin:15px 3px 6px}
 #app.light .booking-reserve-button{font-size:19px;min-height:53px;background:#f35580}
+
+/* v1.0.10: keep the original embossed background and all existing button/icon assets. */
+#app .snail-dev-indicator{position:relative;top:auto;left:auto;transform:none;display:table;width:max-content;max-width:95%;margin:2px auto 10px;pointer-events:none;z-index:1;box-shadow:none}
+#app.light .booking-status-card{margin-bottom:12px}
+#app.light .booking-actual-time{margin-top:0}
+#app.light .booking-actual-time .note{font-size:13px;color:#88697b;line-height:1.55}
+#app.light .booking-actual-time input[type="time"]{min-width:0}
