@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='1.0.4';
+const APP_VERSION='1.0.5';
 const KEY='snailbook_v1_store';
 const base={clients:[],services:[{id:'s1',name:'젤네일',price:50000,minutes:60},{id:'s2',name:'젤 제거',price:10000,minutes:30},{id:'s3',name:'네일아트',price:70000,minutes:90},{id:'s4',name:'기본 케어',price:30000,minutes:45}],bookings:[],personalEvents:[],settings:{open:'10:00',close:'20:00',interval:30,closedDays:[0]}};
 function clone(o){return JSON.parse(JSON.stringify(o))}function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.bookings)&&Array.isArray(x.clients)&&Array.isArray(x.services))return {...clone(base),...x,settings:{...base.settings,...x.settings}}}catch(e){}return clone(base)}
@@ -930,7 +930,7 @@ async function cloudFlush(){
  }
 }
 async function cloudCheckRemote(){
- if(!cloudEnabled||!cloudUser||cloudBusy||cloudDirty||cloudConflict||document.hidden)return;
+ if(!cloudEnabled||!cloudUser||cloudBusy||cloudDirty||cloudConflict||document.hidden||!cloudRevision)return;
  // Do not replace an in-progress booking or settings form with a remote render.
  if(tab==='booking'||panel!==null)return;
  try{
@@ -950,7 +950,11 @@ async function cloudBootstrap(){
     if(tab==='settings')render();
    }else{
     const remote=await cloudFetchRow();
-   if(remote)cloudAdopt(remote.state,remote.revision);
+   if(remote){
+    if(cloudDirty||localStorage.getItem(CLOUD_PENDING_KEY)==='yes'){
+     cloudConflict=true;cloudDirty=true;cloudMessage='서버 확인 중 로컬 수정 감지';
+    }else cloudAdopt(remote.state,remote.revision);
+   }
    else{cloudEnabled=false;localStorage.removeItem(CLOUD_ENABLED_KEY);cloudMessage='서버 자료가 없습니다. 공유 시작을 선택하세요';}
    }
   }
@@ -987,7 +991,9 @@ async function cloudLogin(){
  if(!cloudClientReady()){alert('네트워크 연결을 확인해 주세요.');return}
  const {data,error}=await cloudClient.auth.signInWithPassword({email,password});
  if(error){alert('로그인 실패: '+error.message);return}
- cloudUser=data.user;cloudMessage='로그인됨 · 공유 시작 전';render();notify('앱 로그인 완료');
+ cloudUser=data.user;cloudMessage='로그인됨 · 공유 상태 확인 중';
+ await cloudBootstrap();
+ render();notify('앱 로그인 완료');
 }
 async function cloudLogout(){
  if(cloudDirty||cloudBusy||cloudConflict){alert('미전송 변경 사항이 있습니다. 먼저 백업과 동기화 상태를 확인하세요.');return}
@@ -1027,7 +1033,7 @@ async function cloudResolve(){
  cloudAdopt(remote.state,remote.revision);notify('서버 자료 불러오기 완료');
 }
 
-function settingsPage(){if(panel==='cloud')return cloudPanel();if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['cloud','두 아이폰 데이터 공유'],['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.4</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
+function settingsPage(){if(panel==='cloud')return cloudPanel();if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['cloud','두 아이폰 데이터 공유'],['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.5</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
 
 function resetPage(){
  const rows=[
@@ -1917,7 +1923,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=104',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=105',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
