@@ -1396,3 +1396,39 @@ body > nav.nav > button.active > .nav-icon{
  #app.calendar-root .month-cell .day-num{font-size:18px}
  #app.calendar-root .mini-book{font-size:10px}
 }
+
+/* v1.0.2: settlement overview always visible, detailed rows as nested accordions.
+   Financial calculations, receipt colors, delete/swipe behaviors are unchanged. */
+#app.light .sales-inline-page{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+#app.light .sales-inline-content{margin-top:16px}
+#app.light .sales-inline-content .sales-popup-period-title{display:none}
+#app.light .sales-inline-content .sales-accordion-body{padding:0}
+#app.light .sales-inline-content .sales-range-nav{border-top:0;margin-bottom:16px}
+#app.light .sales-inline-content .sales-range-controls strong{font-size:17px;color:#694053}
+#app.light .sales-inline-content .sales-range-controls button{color:#c83a6d;background:#ffedf4}
+#app.light .sales-inline-content .sales-range-nav>span{color:#7e6173;font-size:15px}
+#app.light .sales-inline-content .sales-overview{background:#fff3f8;border:1px solid #f5dce5}
+#app.light .sales-inline-content .sales-overview .stat{color:#bf3b6a}
+#app.light .sales-inline-content .sales-overview .receipts-split>div{background:#fffdfd;border:1px solid #f5e2ea;border-radius:10px}
+#app.light .sales-inline-content .sales-overview .receipts-split small{color:#987f8d}
+#app.light .sales-inline-content .sales-performance,
+#app.light .sales-inline-content .sales-customers{border:1px solid #efd5df;border-radius:14px;background:#fffafd;margin:13px 0 0;overflow:hidden}
+#app.light .sales-inline-content .sales-performance>summary,
+#app.light .sales-inline-content .sales-customers>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 13px;color:#743f58;font-size:17px;font-weight:750;cursor:pointer}
+#app.light .sales-inline-content .sales-customers>summary::-webkit-details-marker,
+#app.light .sales-inline-content .sales-performance>summary::-webkit-details-marker{display:none}
+#app.light .sales-inline-content .sales-customers[open]>summary>span,
+#app.light .sales-inline-content .sales-performance[open]>summary>span{transform:rotate(180deg)}
+#app.light .sales-inline-content .sales-customers-body{padding:0 10px 12px}
+#app.light .sales-inline-content .receipt-customer{background:#fff5f9;border:1px solid #f2d8e3;margin:8px 0}
+#app.light .sales-inline-content .receipt-customer summary{color:#57374a;font-size:15px}
+#app.light .sales-inline-content .receipt-swipe-main{background:#fffafd;font-size:14px}
+#app.light .sales-inline-content .receipt-row-date{color:#877482}
+#app.light .sales-inline-content .receipt-swipe{border-color:#ecd5df}
+#app.light .sales-inline-content .sales-performance-info{padding:0 13px 13px}
+#app.light .sales-inline-content .sales-customers-body>.empty{padding:16px 8px;color:#846d7a}
+@media(max-width:380px){
+ #app.light .sales-inline-content .sales-range-controls strong{font-size:15px}
+ #app.light .sales-inline-content .sales-performance>summary,
+ #app.light .sales-inline-content .sales-customers>summary{font-size:16px}
+}
