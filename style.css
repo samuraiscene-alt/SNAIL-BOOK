@@ -1480,3 +1480,8 @@ body > nav.nav > button.active > .nav-icon{
 #app.light .booking-actual-time{margin-top:0}
 #app.light .booking-actual-time .note{font-size:13px;color:#88697b;line-height:1.55}
 #app.light .booking-actual-time input[type="time"]{min-width:0}
+
+/* v1.0.12: denser customer receipt details; existing colors and embossed background unchanged */
+#app.light .sales-inline-content .receipt-customer .receipt-swipe-main{padding-top:10px;padding-bottom:10px}
+#app.light .sales-inline-content .receipt-customer .receipt-row-date{margin-top:0;margin-bottom:4px}
+#app.light .sales-inline-content .receipt-customer .receipt-swipe{margin-top:6px;margin-bottom:6px}
