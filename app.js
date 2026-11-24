@@ -1,6 +1,8 @@
 (()=>{'use strict';
-const APP_VERSION='1.0.5';
-const KEY='snailbook_v1_store';
+const APP_VERSION='1.0.6';
+const SNAIL_MODE_KEY='snailbook_dev_mode_v1';
+const SNAIL_TEST_MODE=localStorage.getItem(SNAIL_MODE_KEY)==='test';
+const KEY=SNAIL_TEST_MODE?'snailbook_v1_test_store':'snailbook_v1_store';
 const base={clients:[],services:[{id:'s1',name:'젤네일',price:50000,minutes:60},{id:'s2',name:'젤 제거',price:10000,minutes:30},{id:'s3',name:'네일아트',price:70000,minutes:90},{id:'s4',name:'기본 케어',price:30000,minutes:45}],bookings:[],personalEvents:[],settings:{open:'10:00',close:'20:00',interval:30,closedDays:[0]}};
 function clone(o){return JSON.parse(JSON.stringify(o))}function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.bookings)&&Array.isArray(x.clients)&&Array.isArray(x.services))return {...clone(base),...x,settings:{...base.settings,...x.settings}}}catch(e){}return clone(base)}
 let store=load(),tab='calendar',view='month',cursor=new Date(),selected=localDate(new Date()),panel=null,editing=null,checkedServices=[],extras=[],search='',toastTimer,earlyFinishAuthorized=false,treatmentGender=null,treatmentCategory=null,settingsGender=null,settingsCategory=null;
@@ -246,7 +248,7 @@ function clientName(b){return findClient(b.clientId)?.name||b.name||'고객'}
 function dateTitle(d){const x=dateOf(d);return `${x.getMonth()+1}월 ${x.getDate()}일 ${w[x.getDay()]}요일`}
 const ICON_MARKUP=["<svg viewbox=\"0 0 28 28\"><rect height=\"19\" rx=\"3\" width=\"21\" x=\"3.5\" y=\"5.5\"></rect><path d=\"M8.5 3.5v5m11-5v5M4 11h20M8 15h.01M14 15h.01M20 15h.01M8 19h.01M14 19h.01M20 19h.01\"></path></svg>", "<svg viewbox=\"0 0 28 28\"><rect height=\"21\" rx=\"3\" width=\"18\" x=\"5\" y=\"3.5\"></rect><path d=\"M9 8h10M9 13h2m4 0h2m-8 4h2m4 0h2m-8 4h2m4 0h2\"></path></svg>", "<svg viewbox=\"0 0 28 28\"><path d=\"M23.2 10.5A10 10 0 1 0 23 18M20.2 5.5l3.5 5 2-5.8\"></path><text fill=\"currentColor\" font-family=\"Arial,sans-serif\" font-size=\"16\" font-weight=\"700\" stroke=\"none\" text-anchor=\"middle\" x=\"13.5\" y=\"19\">$</text></svg>", "<svg viewbox=\"0 0 28 28\"><path d=\"m11.7 3.8.5-1h3.6l.5 1 1.7.9 1.1-.2 2.5 2.5-.2 1.1.9 1.7 1 .5v3.6l-1 .5-.9 1.7.2 1.1-2.5 2.5-1.1-.2-1.7.9-.5 1h-3.6l-.5-1-1.7-.9-1.1.2-2.5-2.5.2-1.1-.9-1.7-1-.5v-3.6l1-.5.9-1.7-.2-1.1 2.5-2.5 1.1.2z\"></path><circle cx=\"14\" cy=\"12.1\" r=\"3.5\"></circle></svg>"];
 function nav(activeDark){const icons=ICON_MARKUP;return `<nav class="nav ${activeDark?'dark':''}">${['calendar','booking','sales','settings'].map((t,i)=>`<button aria-label="${['달력','시술 등록','매출','설정'][i]}" class="${tab===t?'active':''}" data-tab="${t}"><span class="nav-icon">${icons[i]}</span></button>`).join('')}</nav>`}
-function render(){const dark=tab==='calendar';root.className=dark?'calendar-root':'light';root.innerHTML=(tab==='calendar'?calendarPage():tab==='booking'?bookingPage():tab==='sales'?salesPage():settingsPage())+(tab==='calendar'?'<button class="fab" data-new="1" aria-label="예약 추가">+</button>':'');let bottomNav=document.querySelector('body > nav.nav');if(!bottomNav){bottomNav=document.createElement('nav');document.body.appendChild(bottomNav)}bottomNav.className='nav'+(dark?' dark':'');bottomNav.innerHTML=['calendar','booking','sales','settings'].map((t,i)=>`<button aria-label="${['달력','시술 등록','매출','설정'][i]}" class="${tab===t?'active':''}" data-tab="${t}"><span class="nav-icon">${ICON_MARKUP[i]}</span></button>`).join('');bind();if(typeof setTimeout==='function')setTimeout(()=>{checkPendingPassFirstUse();checkEndReminders()},180);}
+function render(){const dark=tab==='calendar';root.className=dark?'calendar-root':'light';root.innerHTML=(SNAIL_TEST_MODE?'<div class="snail-dev-indicator">TEST · 실사용 데이터 분리</div>':'')+(tab==='calendar'?calendarPage():tab==='booking'?bookingPage():tab==='sales'?salesPage():settingsPage())+(tab==='calendar'?'<button class="fab" data-new="1" aria-label="예약 추가">+</button>':'');let bottomNav=document.querySelector('body > nav.nav');if(!bottomNav){bottomNav=document.createElement('nav');document.body.appendChild(bottomNav)}bottomNav.className='nav'+(dark?' dark':'');bottomNav.innerHTML=['calendar','booking','sales','settings'].map((t,i)=>`<button aria-label="${['달력','시술 등록','매출','설정'][i]}" class="${tab===t?'active':''}" data-tab="${t}"><span class="nav-icon">${ICON_MARKUP[i]}</span></button>`).join('');bind();if(typeof setTimeout==='function')setTimeout(()=>{checkPendingPassFirstUse();checkEndReminders()},180);}
 function heading(){const anchor=view==='month'?`${cursor.getFullYear()}년 ${cursor.getMonth()+1}월`:view==='week'?`${shift(weekStart(selected),0).slice(5).replace('-','/')} – ${shift(weekStart(selected),6).slice(5).replace('-','/')}`:dateTitle(selected);return `<div class="heading-nav"><button data-move="-1" aria-label="이전">‹</button><strong>${anchor}</strong><button data-move="1" aria-label="다음">›</button></div>`}
 function weekStart(d){const day=dateOf(d).getDay();return shift(d,-((day+6)%7))}
 function calendarPage(){let html=`<div class="wrap"><div class="calendar-top"><button class="round-dark" data-panel="menu" aria-label="개인 일정 관리">≡</button><button class="round-dark" data-panel="search" aria-label="검색">⌕</button></div><div class="segment dark">${['month','week','day'].map((v,i)=>`<button data-view="${v}" class="${view===v?'active':''}">${['월간','주간','일간'][i]}</button>`).join('')}</div>${heading()}`;if(view==='month')html+=monthGrid();else html+=timeGrid();if(panel==='search')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup" role="dialog" aria-modal="true" aria-label="예약 검색"><div class="calendar-popup-title"><h3>예약 검색</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div><input id="calSearch" class="search" placeholder="고객 이름 검색" value="${esc(search)}"><div id="searchResults">${searchResults()}</div></section></div>`;if(panel==='menu')html+=`<div class="calendar-popup-backdrop" data-close-calendar-popup="1"><section class="calendar-popup calendar-menu-popup" role="dialog" aria-modal="true" aria-label="개인 일정 관리"><div class="calendar-popup-title"><h3>개인 일정 관리</h3><button type="button" data-close-calendar-popup="1" aria-label="닫기">×</button></div>${personalCalendarMenu()}</section></div>`;if(panel==='appointments')html+=`<div class="appointment-backdrop" data-close-appointments="1"><section class="appointment-modal" role="dialog" aria-modal="true" aria-label="${dateTitle(selected)} 예약 상세"><button class="modal-close" data-close-appointments="1" aria-label="닫기">×</button>${dayDetail(selected)}</section></div>`;return html+'</div>'}
@@ -878,8 +880,10 @@ async function googleSyncBookings(){
 /* v1.0.4 Family-only 2-device cloud mode. No server writes until explicitly enabled. */
 const CLOUD_URL='https://jiqcdbandxletnqpdkaj.supabase.co';
 const CLOUD_KEY="sb_publishable_IYFrIGO5hYnucIHprJQEGQ_bae42Jl7";
-const CLOUD_ENABLED_KEY='snailbook_family_cloud_enabled_v1';
-const CLOUD_PENDING_KEY='snailbook_family_unsent_changes_v1';
+const CLOUD_ENABLED_KEY=SNAIL_TEST_MODE?'snailbook_test_cloud_enabled_v1':'snailbook_family_cloud_enabled_v1';
+const CLOUD_PENDING_KEY=SNAIL_TEST_MODE?'snailbook_test_unsent_changes_v1':'snailbook_family_unsent_changes_v1';
+const CLOUD_TABLE=SNAIL_TEST_MODE?'snail_shop_test_state':'snail_shop_state';
+const CLOUD_SYNC_RPC=SNAIL_TEST_MODE?'snail_replace_test_state':'snail_replace_state';
 let cloudClient=null,cloudUser=null,cloudEnabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='yes';
 let cloudRevision=0,cloudBusy=false,cloudConflict=false,cloudDirty=false,cloudTimer=null,cloudPolling=null,cloudMessage='연결 확인 중';
 function cloudStatus(){return !cloudUser?'로그인 전':cloudConflict?'수정 충돌 · 백업 후 서버 자료 확인':!cloudEnabled?'로그인됨 · 공유 시작 전':cloudBusy?'서버 저장 중':cloudDirty?'저장 대기 중':cloudMessage}
@@ -901,7 +905,7 @@ function cloudAdopt(state,revision){
 }
 async function cloudFetchRow(){
  if(!cloudClientReady()||!cloudUser)throw Error('로그인이 필요합니다.');
- const {data,error}=await cloudClient.from('snail_shop_state').select('state,revision').eq('owner_id',cloudUser.id).maybeSingle();
+ const {data,error}=await cloudClient.from(CLOUD_TABLE).select('state,revision').eq('owner_id',cloudUser.id).maybeSingle();
  if(error)throw error;return data;
 }
 function cloudScheduleSave(){
@@ -915,7 +919,7 @@ async function cloudFlush(){
  const snapshot=cloudSafeSnapshot(store);
  const revision=cloudRevision;
  try{
-  const {data,error}=await cloudClient.rpc('snail_replace_state',{expected_revision:revision,next_state:snapshot});
+  const {data,error}=await cloudClient.rpc(CLOUD_SYNC_RPC,{expected_revision:revision,next_state:snapshot});
   if(error)throw error;
   if(!Number(data)){cloudConflict=true;cloudMessage='다른 폰에서 먼저 수정함';alert('두 아이폰의 수정이 충돌했습니다.\n이 폰의 변경 사항은 로컬에 남아 있습니다.\n백업 후 설정 → 두 아이폰 공유에서 확인해 주세요.');return;}
   cloudRevision=Number(data);cloudDirty=JSON.stringify(cloudSafeSnapshot(store))!==JSON.stringify(snapshot);
@@ -965,6 +969,10 @@ async function cloudBootstrap(){
 function cloudPanel(){
  const logged=!!cloudUser;
  return '<div class="wrap cloud-panel">'+panelHead('두 아이폰 데이터 공유')+
+ '<div class="card cloud-test-tools"><b>개발·테스트 환경</b>'+
+ '<p class="note">현재 모드: '+(SNAIL_TEST_MODE?'테스트 서버 (가족의 실제 데이터와 완전 분리)':'실사용 서버')+'</p>'+
+ '<button type="button" class="ghost" data-cloud-toggle-test>'+(SNAIL_TEST_MODE?'실사용 모드로 돌아가기':'테스트 모드로 전환')+'</button>'+
+ '<p class="note">모드를 바꿔도 기존 데이터는 삭제되지 않습니다. 테스트 모드의 예약·고객·매출 자료는 실사용 모드로 복사되지 않습니다.</p></div>'+
  '<div class="card"><strong>현재 상태: '+esc(cloudStatus())+'</strong>'+
  '<p class="note">가게폰과 개인폰에서 동일한 앱 계정으로 로그인하세요. Supabase 별도 가입은 필요 없습니다.</p>'+
  (logged?'<p class="muted">로그인: '+esc(cloudUser.email||'가족 계정')+'</p>'+
@@ -1010,7 +1018,7 @@ async function cloudStart(){
  try{
   const remote=await cloudFetchRow();
   if(remote){alert('이미 공유 서버 자료가 있습니다. 기존 공유 자료 가져오기를 사용하세요.');return}
-  const {data,error}=await cloudClient.from('snail_shop_state').insert({owner_id:cloudUser.id,state:cloudSafeSnapshot(store),revision:1}).select('revision').single();
+  const {data,error}=await cloudClient.from(CLOUD_TABLE).insert({owner_id:cloudUser.id,state:cloudSafeSnapshot(store),revision:1}).select('revision').single();
   if(error)throw error;
   cloudRevision=Number(data.revision);cloudEnabled=true;cloudDirty=false;localStorage.removeItem(CLOUD_PENDING_KEY);cloudMessage='공유 시작 완료';
   localStorage.setItem(CLOUD_ENABLED_KEY,'yes');render();notify('가족 공유 시작 완료');
@@ -1033,7 +1041,7 @@ async function cloudResolve(){
  cloudAdopt(remote.state,remote.revision);notify('서버 자료 불러오기 완료');
 }
 
-function settingsPage(){if(panel==='cloud')return cloudPanel();if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['cloud','두 아이폰 데이터 공유'],['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.5</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
+function settingsPage(){if(panel==='cloud')return cloudPanel();if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['cloud','두 아이폰 데이터 공유'],['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.6</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
 
 function resetPage(){
  const rows=[
@@ -1525,7 +1533,18 @@ async function refreshInstalledApp(){
 }
 
 
+function switchSnailMode(){
+ if(cloudBusy||cloudDirty||cloudConflict||localStorage.getItem(CLOUD_PENDING_KEY)==='yes'){
+  alert('동기화 대기 또는 수정 충돌이 있습니다. 먼저 백업과 서버 저장 상태를 확인해 주세요.');return;
+ }
+ const target=SNAIL_TEST_MODE?'실사용':'테스트';
+ if(!confirm(target+' 모드로 변경할까요?\n현재 모드의 데이터는 유지되며, 모드별 저장소와 서버가 분리됩니다.'))return;
+ if(SNAIL_TEST_MODE)localStorage.removeItem(SNAIL_MODE_KEY);
+ else localStorage.setItem(SNAIL_MODE_KEY,'test');
+ location.reload();
+}
 function bind(){
+ root.querySelector('[data-cloud-toggle-test]')?.addEventListener('click',switchSnailMode);
  root.querySelector('[data-cloud-login]')?.addEventListener('click',cloudLogin);
  root.querySelector('[data-cloud-logout]')?.addEventListener('click',cloudLogout);
  root.querySelector('[data-cloud-start]')?.addEventListener('click',cloudStart);
@@ -1923,7 +1942,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=105',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=106',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
