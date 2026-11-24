@@ -1462,7 +1462,7 @@ body > nav.nav > button.active > .nav-icon{
 #app.light .cloud-test-tools .ghost{color:#a93264;background:white;border:1px solid #edb5c9}
 
 /* v1.0.8 booking composition: preserves established embossed paper */
-#app.light .booking-completion-accordion{margin:12px 0 16px;border:1px solid #eebed1;border-radius:19px;overflow:hidden;background:rgba(255,253,254,.90)}
+#app.light .booking-completion-accordion{margin:12px 0 16px;border:1px solid #eebed1;border-radius:19px;overflow:hidden;background:rgba(255,238,246,.38)}
 #app.light .booking-completion-accordion>summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:19px 18px;color:#713b54;list-style:none}
 #app.light .booking-completion-accordion>summary::-webkit-details-marker{display:none}
 #app.light .booking-completion-accordion>summary strong{font-size:20px;font-weight:800}
