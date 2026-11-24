@@ -931,6 +931,8 @@ async function cloudFlush(){
 }
 async function cloudCheckRemote(){
  if(!cloudEnabled||!cloudUser||cloudBusy||cloudDirty||cloudConflict||document.hidden)return;
+ // Do not replace an in-progress booking or settings form with a remote render.
+ if(tab==='booking'||panel!==null)return;
  try{
   const remote=await cloudFetchRow();
   if(remote&&Number(remote.revision)>cloudRevision)cloudAdopt(remote.state,remote.revision);
@@ -945,11 +947,12 @@ async function cloudBootstrap(){
   if(cloudUser&&cloudEnabled){
    if(localStorage.getItem(CLOUD_PENDING_KEY)==='yes'){
     cloudConflict=true;cloudDirty=true;cloudMessage='전송되지 않은 로컬 변경 보호 중';
-    if(tab==='settings')render();return;
-   }
-   const remote=await cloudFetchRow();
+    if(tab==='settings')render();
+   }else{
+    const remote=await cloudFetchRow();
    if(remote)cloudAdopt(remote.state,remote.revision);
    else{cloudEnabled=false;localStorage.removeItem(CLOUD_ENABLED_KEY);cloudMessage='서버 자료가 없습니다. 공유 시작을 선택하세요';}
+   }
   }
   if(!cloudPolling)cloudPolling=setInterval(cloudCheckRemote,12000);
   if(tab==='settings')render();
