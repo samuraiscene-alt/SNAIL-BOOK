@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const APP_VERSION='1.0.6';
+const APP_VERSION='1.0.7';
 const SNAIL_MODE_KEY='snailbook_dev_mode_v1';
 const SNAIL_TEST_MODE=localStorage.getItem(SNAIL_MODE_KEY)==='test';
 const KEY=SNAIL_TEST_MODE?'snailbook_v1_test_store':'snailbook_v1_store';
@@ -1041,7 +1041,7 @@ async function cloudResolve(){
  cloudAdopt(remote.state,remote.revision);notify('서버 자료 불러오기 완료');
 }
 
-function settingsPage(){if(panel==='cloud')return cloudPanel();if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['cloud','두 아이폰 데이터 공유'],['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.6</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
+function settingsPage(){if(panel==='cloud')return cloudPanel();if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['cloud','두 아이폰 데이터 공유'],['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.7</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
 
 function resetPage(){
  const rows=[
@@ -1942,8 +1942,10 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=106',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=107',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
+// Restore the saved Supabase user and pull the latest revision after the app starts.
+cloudBootstrap();
 })();
