@@ -1,4 +1,5 @@
 (()=>{'use strict';
+const APP_VERSION='1.0.3';
 const KEY='snailbook_v1_store';
 const base={clients:[],services:[{id:'s1',name:'젤네일',price:50000,minutes:60},{id:'s2',name:'젤 제거',price:10000,minutes:30},{id:'s3',name:'네일아트',price:70000,minutes:90},{id:'s4',name:'기본 케어',price:30000,minutes:45}],bookings:[],personalEvents:[],settings:{open:'10:00',close:'20:00',interval:30,closedDays:[0]}};
 function clone(o){return JSON.parse(JSON.stringify(o))}function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x&&Array.isArray(x.bookings)&&Array.isArray(x.clients)&&Array.isArray(x.services))return {...clone(base),...x,settings:{...base.settings,...x.settings}}}catch(e){}return clone(base)}
@@ -546,7 +547,7 @@ function chooseTreatmentGroup(gender,category){
  else{treatmentGender=gender;treatmentCategory=category}
  render();restoreForm();
 }
-function bookingPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자가 설치한 기기에서 연동할 예정입니다. 현재 버전은 캘린더 연동 기능을 실행하지 않습니다.');const b=editing?store.bookings.find(x=>x.id===editing):null;let client=b?findClient(b.clientId):null;let local=editing?b:null;let selections=checkedServices.map(id=>store.services.find(x=>x.id===id)).filter(Boolean),total=selections.reduce((a,s)=>a+Number(s.price),0)+extras.reduce((a,e)=>a+Number(e.amount),0);return `<div class="wrap"><h2 class="form-title">${b?'시술 예약 수정':'시술 예약 등록'} <small class="app-version-label">v1.0.1</small></h2><div class="card"><div class="field"><label>고객 이름</label><div class="client-autocomplete"><input id="name" autocomplete="off" placeholder="고객 이름 또는 초성 입력" value="${esc(client?.name||local?.name||'')}"><div id="clientSuggestions" class="client-suggestions" hidden></div></div></div><div class="field"><label>연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" value="${esc(client?.phone||local?.phone||'')}"></div><div class="field"><label>시술일</label><input id="date" type="date" value="${esc(local?.date||selected)}"></div><div class="field"><label>시술시간</label><input id="start" type="time" value="${esc(local?.start||store.settings.open)}"></div><div class="field"><label>종료시간</label><input id="end" type="time" value="${esc(local?.end||hour(mins(store.settings.open)+60))}"></div></div><div id="membershipMount"></div><div class="card"><div class="row"><b>시술 내역</b><span class="muted">복수 선택 가능</span></div><div class="treatment-catalog"><div class="treatment-genders">${[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>`<button type="button" class="treatment-gender ${treatmentGender===g?'active':''}" data-treatment-gender="${g}">${label}<span>${treatmentGender===g?'⌃':'⌄'}</span></button>`).join('')}</div>${treatmentGender?`<div class="treatment-category-list">${TREATMENT_CATEGORIES.filter(cat=>treatmentGender==='W'||cat!=='특별 케어').map(cat=>`<button type="button" class="treatment-category ${treatmentCategory===cat?'active':''}" data-treatment-category="${cat}"><span>${cat}</span><span>›</span></button>`).join('')}</div>`:''}</div><div class="selected-treatments">${selections.map(s=>`<div class="selected-treatment"><span>${esc(s.name)}</span><button type="button" data-treatment-remove="${s.id}" aria-label="선택 해제">×</button></div>`).join('')||'<div class="muted">선택된 시술이 없습니다.</div>'}</div><div class="row" style="margin-top:13px"><span class="muted">선택 시술 예상 시간</span><b>${selections.reduce((a,s)=>a+Number(s.minutes),0)}분</b></div></div><div class="card"><div class="row extras-header"><b>그 외 추가 비용·할인</b><span class="extras-add-actions"><button type="button" class="extras-plus" data-add-extra="plus" aria-label="추가 비용">＋</button><button type="button" class="extras-minus" data-add-extra="minus" aria-label="할인">−</button></span></div>${extras.map((e,i)=>`<div class="field extras-editor-row"><span class="extras-kind ${Number(e.amount)<0||e.kind==='minus'?'minus':'plus'}">${Number(e.amount)<0||e.kind==='minus'?'−':'＋'}</span><input aria-label="추가 항목 이름" data-extra-name="${i}" placeholder="${Number(e.amount)<0||e.kind==='minus'?'할인 항목':'추가 비용 항목'}" value="${esc(e.name)}"><input aria-label="금액" data-extra-amount="${i}" type="number" inputmode="numeric" min="0" value="${Math.abs(Number(e.amount)||0)}"><button class="danger" data-remove-extra="${i}">×</button></div>`).join('')}<div class="extras-bill" id="extraBill">${extras.map((e,i)=>`<div class="extras-bill-row"><span>${Number(e.amount)<0||e.kind==='minus'?'−':'＋'} ${esc(e.name||'항목 '+(i+1))}</span><b class="${Number(e.amount)<0||e.kind==='minus'?'minus':'plus'}">${Number(e.amount)<0||e.kind==='minus'?'−':'＋'}${money(Math.abs(Number(e.amount)||0))}</b></div>`).join('')}</div><div class="row" style="margin-top:15px"><b>예상 결제 금액</b><b id="bookingTotal" style="font-size:22px;color:#087aff">${money(total+(b?.passPaymentMethod==="card"&&specialKind(selections)==="buy"?10000:0))}</b></div></div><div class="card"><div class="field"><label>진행 상태</label><select id="status"><option value="reserved" ${!local||local.status==='reserved'?'selected':''}>예약</option><option value="paid" ${local?.status==='paid'?'selected':''}>완료</option><option value="finishNow">지금 시술 완료</option>${local?.status==='done'?'<option value="done" selected>기존 시술 완료 · 정산 전</option>':''}<option value="cancelled" ${local?.status==='cancelled'?'selected':''}>예약 취소</option><option value="noshow" ${local?.status==='noshow'?'selected':''}>노쇼</option></select></div><div class="payment-method-block"><b>결제 방법</b><div class="payment-switch-row"><label class="payment-switch-option"><span>카드</span><input type="checkbox" id="payCard" ${local?.paymentMethod==='card'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label><label class="payment-switch-option"><span>현금</span><input type="checkbox" id="payCash" ${local?.paymentMethod==='cash'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label></div><p class="payment-note">처음에는 둘 다 꺼져 있습니다. 완료 시 결제 방법을 선택하세요.</p></div><div class="field"><label>고객 메모</label><textarea id="memo" placeholder="시술 및 고객 특이사항">${esc(local?.memo||'')}</textarea></div></div><button class="primary" data-save-booking="1">${b?'수정 내용 저장':'시술 금액 계산·예약 저장'}</button>${b?`<button class="danger" style="width:100%" data-delete-booking="${b.id}">예약 삭제</button><button class="ghost" style="width:100%;margin-top:10px" data-new="1">새 예약 등록</button>`:''}<p class="note">예약 시점에는 매출과 회원권 사용액에 반영되지 않습니다. 시술 종료 시간이 지난 후 ‘완료’로 저장하면 정산됩니다.</p></div>`}
+function bookingPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자가 설치한 기기에서 연동할 예정입니다. 현재 버전은 캘린더 연동 기능을 실행하지 않습니다.');const b=editing?store.bookings.find(x=>x.id===editing):null;let client=b?findClient(b.clientId):null;let local=editing?b:null;let selections=checkedServices.map(id=>store.services.find(x=>x.id===id)).filter(Boolean),total=selections.reduce((a,s)=>a+Number(s.price),0)+extras.reduce((a,e)=>a+Number(e.amount),0);return `<div class="wrap"><h2 class="form-title">${b?'시술 예약 수정':'시술 예약 등록'} <small class="app-version-label">v1.0.3</small></h2><div class="card"><div class="field"><label>고객 이름</label><div class="client-autocomplete"><input id="name" autocomplete="off" placeholder="고객 이름 또는 초성 입력" value="${esc(client?.name||local?.name||'')}"><div id="clientSuggestions" class="client-suggestions" hidden></div></div></div><div class="field"><label>연락처</label><input id="phone" inputmode="tel" placeholder="010-0000-0000" value="${esc(client?.phone||local?.phone||'')}"></div><div class="field"><label>시술일</label><input id="date" type="date" value="${esc(local?.date||selected)}"></div><div class="field"><label>시술시간</label><input id="start" type="time" value="${esc(local?.start||store.settings.open)}"></div><div class="field"><label>종료시간</label><input id="end" type="time" value="${esc(local?.end||hour(mins(store.settings.open)+60))}"></div></div><div id="membershipMount"></div><div class="card"><div class="row"><b>시술 내역</b><span class="muted">복수 선택 가능</span></div><div class="treatment-catalog"><div class="treatment-genders">${[['W','여자 (W)'],['M','남자 (M)']].map(([g,label])=>`<button type="button" class="treatment-gender ${treatmentGender===g?'active':''}" data-treatment-gender="${g}">${label}<span>${treatmentGender===g?'⌃':'⌄'}</span></button>`).join('')}</div>${treatmentGender?`<div class="treatment-category-list">${TREATMENT_CATEGORIES.filter(cat=>treatmentGender==='W'||cat!=='특별 케어').map(cat=>`<button type="button" class="treatment-category ${treatmentCategory===cat?'active':''}" data-treatment-category="${cat}"><span>${cat}</span><span>›</span></button>`).join('')}</div>`:''}</div><div class="selected-treatments">${selections.map(s=>`<div class="selected-treatment"><span>${esc(s.name)}</span><button type="button" data-treatment-remove="${s.id}" aria-label="선택 해제">×</button></div>`).join('')||'<div class="muted">선택된 시술이 없습니다.</div>'}</div><div class="row" style="margin-top:13px"><span class="muted">선택 시술 예상 시간</span><b>${selections.reduce((a,s)=>a+Number(s.minutes),0)}분</b></div></div><div class="card"><div class="row extras-header"><b>그 외 추가 비용·할인</b><span class="extras-add-actions"><button type="button" class="extras-plus" data-add-extra="plus" aria-label="추가 비용">＋</button><button type="button" class="extras-minus" data-add-extra="minus" aria-label="할인">−</button></span></div>${extras.map((e,i)=>`<div class="field extras-editor-row"><span class="extras-kind ${Number(e.amount)<0||e.kind==='minus'?'minus':'plus'}">${Number(e.amount)<0||e.kind==='minus'?'−':'＋'}</span><input aria-label="추가 항목 이름" data-extra-name="${i}" placeholder="${Number(e.amount)<0||e.kind==='minus'?'할인 항목':'추가 비용 항목'}" value="${esc(e.name)}"><input aria-label="금액" data-extra-amount="${i}" type="number" inputmode="numeric" min="0" value="${Math.abs(Number(e.amount)||0)}"><button class="danger" data-remove-extra="${i}">×</button></div>`).join('')}<div class="extras-bill" id="extraBill">${extras.map((e,i)=>`<div class="extras-bill-row"><span>${Number(e.amount)<0||e.kind==='minus'?'−':'＋'} ${esc(e.name||'항목 '+(i+1))}</span><b class="${Number(e.amount)<0||e.kind==='minus'?'minus':'plus'}">${Number(e.amount)<0||e.kind==='minus'?'−':'＋'}${money(Math.abs(Number(e.amount)||0))}</b></div>`).join('')}</div><div class="row" style="margin-top:15px"><b>예상 결제 금액</b><b id="bookingTotal" style="font-size:22px;color:#087aff">${money(total+(b?.passPaymentMethod==="card"&&specialKind(selections)==="buy"?10000:0))}</b></div></div><div class="card"><div class="field"><label>진행 상태</label><select id="status"><option value="reserved" ${!local||local.status==='reserved'?'selected':''}>예약</option><option value="paid" ${local?.status==='paid'?'selected':''}>완료</option><option value="finishNow">지금 시술 완료</option>${local?.status==='done'?'<option value="done" selected>기존 시술 완료 · 정산 전</option>':''}<option value="cancelled" ${local?.status==='cancelled'?'selected':''}>예약 취소</option><option value="noshow" ${local?.status==='noshow'?'selected':''}>노쇼</option></select></div><div class="payment-method-block"><b>결제 방법</b><div class="payment-switch-row"><label class="payment-switch-option"><span>카드</span><input type="checkbox" id="payCard" ${local?.paymentMethod==='card'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label><label class="payment-switch-option"><span>현금</span><input type="checkbox" id="payCash" ${local?.paymentMethod==='cash'?'checked':''}><span class="payment-switch-track" aria-hidden="true"></span></label></div><p class="payment-note">처음에는 둘 다 꺼져 있습니다. 완료 시 결제 방법을 선택하세요.</p></div><div class="field"><label>고객 메모</label><textarea id="memo" placeholder="시술 및 고객 특이사항">${esc(local?.memo||'')}</textarea></div></div><button class="primary" data-save-booking="1">${b?'수정 내용 저장':'시술 금액 계산·예약 저장'}</button>${b?`<button class="danger" style="width:100%" data-delete-booking="${b.id}">예약 삭제</button><button class="ghost" style="width:100%;margin-top:10px" data-new="1">새 예약 등록</button>`:''}<p class="note">예약 시점에는 매출과 회원권 사용액에 반영되지 않습니다. 시술 종료 시간이 지난 후 ‘완료’로 저장하면 정산됩니다.</p></div>`}
 
 /* Cash receipts: deposits count on their deposit date; prepaid redemption is not a new receipt. */
 function receiptMethod(method){return method==='cash'?'cash':method==='card'?'card':'unknown'}
@@ -759,7 +760,121 @@ function bindReceiptSwipes(){
   remove.addEventListener('click',()=>deleteReceipt(kind,id,clientId));
  });
 }
-function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return simplePanel('Google 캘린더 연동','앱 완성 후 실제 사용자의 Google 계정으로 연결할 예정입니다. 연결 기능은 현재 미구현 상태입니다.');if(panel==='reset')return resetPage();const entries=[['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.2</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
+function googleSettingsPage(){
+ const savedId=localStorage.getItem('snailbook_google_client_id')||'';
+ const connected=!!googleAccessToken&&Date.now()<googleExpiresAt;
+ return '<div class="wrap google-setup">'+panelHead('Google 캘린더 연동')+
+ '<div class="card google-setup-card"><h3>Google 계정 연결</h3>'+
+ '<p class="note">실사용자 아이폰에서 본인의 Google 계정으로 연결하세요. 개발용 아이폰에서는 연결할 필요가 없습니다.</p>'+
+ '<label class="google-label" for="googleClientId">Google OAuth 웹 클라이언트 ID</label>'+
+ '<input id="googleClientId" class="google-id-input" inputmode="url" autocomplete="off" spellcheck="false" placeholder="000000-xxx.apps.googleusercontent.com" value="'+esc(savedId)+'">'+
+ '<button type="button" class="google-subtle-btn" data-google-save>클라이언트 ID 저장</button>'+
+ '<div class="google-status">'+(connected?'연결 상태: 승인됨 (이번 실행에서만 유효)':'연결 상태: Google 로그인 필요')+'</div>'+
+ '<button type="button" class="primary" data-google-connect>Google 계정 연결</button>'+
+ '<p class="note">Google 로그인 화면이 열리지 않으면 홈 화면 앱 대신 Safari에서 같은 앱 주소를 열어 연결하세요.</p></div>'+
+ '<div class="card google-setup-card"><h3>예약 → Google 캘린더</h3>'+
+ '<p class="note">본 앱에서 Google로 내보내는 단방향 동기화입니다. 고객 이름·전화번호·메모·금액은 보내지 않고 시술 예약 시간만 표시합니다.</p>'+
+ '<p class="note">등록·수정된 예약은 생성 또는 변경하고, 취소·노쇼·삭제한 예약의 기존 Google 일정은 정리합니다. 자동 동기화는 아직 적용하지 않았습니다.</p>'+
+ '<button type="button" class="primary" data-google-sync '+(!connected||googleBusy?'disabled':'')+'>'+(googleBusy?'동기화 중…':'예약 수동 동기화')+'</button>'+
+ '<p class="note">연결 및 동기화는 사용자가 직접 눌러야 합니다. Google에 이미 있는 개인 일정은 건드리지 않습니다.</p></div></div>';
+}
+let googleAccessToken=null,googleExpiresAt=0,googleBusy=false;
+const GOOGLE_SCOPE='https://www.googleapis.com/auth/calendar.events.owned';
+function googleSaveClientId(){
+ const id=root.querySelector('#googleClientId')?.value.trim()||'';
+ if(!/^\d+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(id)){
+  alert('Google Cloud에서 발급받은 웹 애플리케이션 OAuth 클라이언트 ID를 입력하세요.');return;
+ }
+ const prev=localStorage.getItem('snailbook_google_client_id')||'';
+ if(prev&&prev!==id&&!confirm('다른 Google OAuth 클라이언트 ID로 바꾸시겠습니까? 기존 Google 일정 연결 관계는 유지됩니다.'))return;
+ localStorage.setItem('snailbook_google_client_id',id);
+ googleAccessToken=null;googleExpiresAt=0;
+ render();notify('Google 클라이언트 ID 저장 완료');
+}
+function googleConnect(){
+ const id=localStorage.getItem('snailbook_google_client_id')||'';
+ if(!id){alert('먼저 Google OAuth 클라이언트 ID를 저장하세요.');return}
+ if(!window.google?.accounts?.oauth2){alert('Google 인증 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하고 Safari에서 다시 시도하세요.');return}
+ try{
+  const client=window.google.accounts.oauth2.initTokenClient({
+   client_id:id,
+   scope:GOOGLE_SCOPE,
+   callback:(response)=>{
+    if(!response||response.error||!response.access_token||
+      !window.google.accounts.oauth2.hasGrantedAllScopes(response,GOOGLE_SCOPE)){
+      alert('Google 캘린더 접근 권한을 승인하지 않았습니다.');return;
+    }
+    googleAccessToken=response.access_token;
+    googleExpiresAt=Date.now()+Math.max(60,Number(response.expires_in||3600)-120)*1000;
+    render();notify('Google 연결 완료');
+   },
+   error_callback:(e)=>{if(e?.type!=='popup_closed')alert('Google 계정 연결에 실패했습니다. Safari에서 다시 시도하세요.')}
+  });
+  client.requestAccessToken();
+ }catch(e){alert('Google 연결을 시작할 수 없습니다. Safari에서 확인하세요.')}
+}
+async function googleCalendarRequest(method,eventId,body){
+ if(!googleAccessToken||Date.now()>=googleExpiresAt)throw Error('접근 권한이 만료되었습니다. 다시 Google 계정 연결을 눌러 주세요.');
+ const base='https://www.googleapis.com/calendar/v3/calendars/primary/events';
+ const url=eventId?base+'/'+encodeURIComponent(eventId):base;
+ const resp=await fetch(url,{
+  method,headers:{'Authorization':'Bearer '+googleAccessToken,...(body?{'Content-Type':'application/json'}:{})},
+  ...(body?{body:JSON.stringify(body)}:{})
+ });
+ if(resp.status===401){googleAccessToken=null;googleExpiresAt=0}
+ if(!resp.ok){const err=new Error('Google API 오류 ('+resp.status+')');err.status=resp.status;throw err}
+ return resp.status===204?null:resp.json();
+}
+function googleEventFingerprint(b){return JSON.stringify([b.date,b.start,b.end,b.status])}
+function googleEventPayload(b){
+ const date=/^\d{4}-\d{2}-\d{2}$/.test(b.date)?b.date:null;
+ if(!date||!/^\d{2}:\d{2}$/.test(b.start)||!/^\d{2}:\d{2}$/.test(b.end))return null;
+ return {
+  summary:'S’NAIL BOOK · 시술 예약',
+  description:'S’NAIL BOOK에서 등록한 예약입니다. 고객 개인정보는 포함하지 않습니다.',
+  start:{dateTime:date+'T'+b.start+':00+09:00',timeZone:'Asia/Seoul'},
+  end:{dateTime:date+'T'+b.end+':00+09:00',timeZone:'Asia/Seoul'},
+  extendedProperties:{private:{snailBookBookingId:String(b.id)}}
+ };
+}
+async function googleSyncBookings(){
+ if(googleBusy)return;
+ if(!googleAccessToken||Date.now()>=googleExpiresAt){alert('Google 계정을 다시 연결하세요.');return}
+ const current=(store.bookings||[]).filter(b=>b.status!=='cancelled'&&b.status!=='noshow');
+ const tracked=(store.googleSyncEvents&&typeof store.googleSyncEvents==='object')?store.googleSyncEvents:{};
+ const obsolete=Object.keys(tracked).filter(id=>!current.some(b=>String(b.id)===id));
+ if(!confirm('예약 '+current.length+'건을 Google 캘린더에 동기화할까요?'+(obsolete.length?'\n취소·삭제된 예약 '+obsolete.length+'건의 앱 생성 Google 일정도 제거됩니다.':'')+'\n고객 이름·연락처·금액·메모는 전송하지 않습니다.'))return;
+ googleBusy=true;render();
+ let created=0,updated=0,removed=0,unchanged=0,failed=0;
+ try{
+  store.googleSyncEvents=tracked;
+  for(const b of current){
+   const payload=googleEventPayload(b),id=String(b.id),fingerprint=googleEventFingerprint(b),old=tracked[id];
+   if(!payload){failed++;continue}
+   if(old&&old.fingerprint===fingerprint){unchanged++;continue}
+   try{
+    let response;
+    if(old?.eventId){
+     try{response=await googleCalendarRequest('PUT',old.eventId,payload);updated++}
+     catch(e){if(e.status!==404)throw e;response=await googleCalendarRequest('POST',null,payload);created++}
+    }else{response=await googleCalendarRequest('POST',null,payload);created++}
+    if(response?.id){tracked[id]={eventId:response.id,fingerprint};save()}
+   }catch(e){failed++;if(e.status===401)throw e}
+  }
+  for(const id of obsolete){
+   const eventId=tracked[id]?.eventId;
+   try{
+    if(eventId){try{await googleCalendarRequest('DELETE',eventId);removed++}catch(e){if(e.status!==404)throw e}}
+    delete tracked[id];save();
+   }catch(e){failed++;if(e.status===401)throw e}
+  }
+  notify('Google 동기화 완료');
+  alert('동기화 결과\n새 등록 '+created+'건 · 수정 '+updated+'건 · 삭제 '+removed+'건\n변경 없음 '+unchanged+'건 · 실패 '+failed+'건');
+ }catch(e){alert('동기화 중단: '+e.message+'\n완료된 일정은 보존되었습니다. 다시 연결 후 재시도할 수 있습니다.')}
+ finally{googleBusy=false;render()}
+}
+
+function settingsPage(){if(panel==='client')return clientPage();if(panel==='services')return servicesPage();if(panel==='hours')return hoursPage();if(panel==='backup')return backupPage();if(panel==='google')return googleSettingsPage();if(panel==='reset')return resetPage();const entries=[['google','Google 캘린더 연동'],['services','서비스 가격'],['hours','예약 시간 설정'],['client','고객 관리'],['backup','백업 내보내기·가져오기'],['reset','초기화']];return `<div class="wrap">${entries.map(([id,label])=>`<button class="setting-row" data-panel="${id}"><span class="settings-icon icon-${id}" aria-hidden="true"></span><span>${label}</span><span class="arrow">›</span></button>`).join('')}<div class="app-update-line"><span>S’NAIL BOOK v1.0.3</span><button type="button" data-refresh-app="1">업데이트 확인</button></div></div>`}
 
 function resetPage(){
  const rows=[
@@ -1221,23 +1336,41 @@ function bindScheduleScroll(){
 
 async function refreshInstalledApp(){
  const button=root.querySelector('[data-refresh-app]');
- if(button){button.disabled=true;button.textContent='업데이트 확인 중…'}
+ const original=button?.textContent;
+ if(button){button.disabled=true;button.textContent='최신 버전 확인 중…'}
  try{
+  const url=new URL('./version.json',location.href);
+  url.searchParams.set('t',String(Date.now()));
+  const response=await fetch(url,{cache:'no-store'});
+  if(!response.ok)throw Error('버전 파일 조회 실패');
+  const info=await response.json();
+  if(!/^\d+\.\d+\.\d+$/.test(info.version||''))throw Error('서버 버전 정보 오류');
+  const parts=v=>v.split('.').map(Number);
+  const current=parts(APP_VERSION),remote=parts(info.version);
+  const newer=remote.some((num,i)=>num>current[i]&&remote.slice(0,i).every((v,j)=>v===current[j]));
+  if(!newer){notify('최신 버전입니다 (v'+APP_VERSION+')');return}
+  if(!confirm('새 버전 v'+info.version+'이 있습니다.\n'+String(info.notes||'')+'\n\n업데이트할까요? 기존 고객·예약 데이터는 유지됩니다.'))return;
   if('serviceWorker' in navigator){
    const reg=await navigator.serviceWorker.getRegistration();
    if(reg)await reg.update();
   }
-  const req=new URL('./index.html',window.location.href);
-  req.searchParams.set('v','102');
+  const req=new URL('./index.html',location.href);
+  req.searchParams.set('v',info.version);
   req.searchParams.set('refresh',String(Date.now()));
   window.location.replace(req.toString());
- }catch(err){
-  if(button){button.disabled=false;button.textContent='업데이트 확인'}
-  alert('업데이트 확인에 실패했습니다. 인터넷 연결을 확인해 주세요.');
+ }catch(e){
+  alert('업데이트 확인 실패: 인터넷 연결 또는 서버 상태를 확인하세요.\n'+e.message);
+ }finally{
+  if(button&&button.isConnected){button.disabled=false;button.textContent=original||'업데이트 확인'}
  }
 }
 
-function bind(){root.querySelectorAll('[data-add-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(null,e.dataset.addPersonal));root.querySelectorAll('[data-edit-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(e.dataset.editPersonal,e.dataset.occurrenceDate));bindReceiptSwipes();bindSalesPopupScroll();bindScheduleScroll();root.querySelector('[data-refresh-app]')?.addEventListener('click',refreshInstalledApp);document.querySelectorAll('body > nav.nav [data-tab]').forEach(e=>e.onclick=()=>{if(tab===e.dataset.tab)return;tab=e.dataset.tab;panel=null;salesPopupPeriod=e.dataset.tab==='sales'?'month':salesPopupPeriod;editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];render();root.scrollTop=0;window.scrollTo(0,0)});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel='appointments';render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{earlyFinishAuthorized=false;editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelectorAll('[data-treatment-gender]').forEach(el=>el.onclick=()=>{captureForm();const g=el.dataset.treatmentGender;treatmentGender=treatmentGender===g?null:g;treatmentCategory=null;render();restoreForm()});
+
+function bind(){
+ root.querySelector('[data-google-save]')?.addEventListener('click',googleSaveClientId);
+ root.querySelector('[data-google-connect]')?.addEventListener('click',googleConnect);
+ root.querySelector('[data-google-sync]')?.addEventListener('click',googleSyncBookings);
+ root.querySelectorAll('[data-add-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(null,e.dataset.addPersonal));root.querySelectorAll('[data-edit-personal]').forEach(e=>e.onclick=()=>openPersonalEditor(e.dataset.editPersonal,e.dataset.occurrenceDate));bindReceiptSwipes();bindSalesPopupScroll();bindScheduleScroll();root.querySelector('[data-refresh-app]')?.addEventListener('click',refreshInstalledApp);document.querySelectorAll('body > nav.nav [data-tab]').forEach(e=>e.onclick=()=>{if(tab===e.dataset.tab)return;tab=e.dataset.tab;panel=null;salesPopupPeriod=e.dataset.tab==='sales'?'month':salesPopupPeriod;editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];render();root.scrollTop=0;window.scrollTo(0,0)});root.querySelectorAll('[data-view]').forEach(e=>e.onclick=()=>{view=e.dataset.view;panel=null;render()});root.querySelectorAll('[data-date]').forEach(e=>e.onclick=()=>{selected=e.dataset.date;cursor=dateOf(selected);panel='appointments';render()});root.querySelectorAll('[data-close-appointments]').forEach(e=>e.onclick=ev=>{if(ev.target!==e)return;panel=null;render()});root.querySelectorAll('[data-move]').forEach(e=>e.onclick=()=>{let n=+e.dataset.move;if(view==='month'){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+n,1);selected=localDate(cursor)}else selected=shift(selected,n*(view==='week'?7:1));render()});root.querySelectorAll('[data-new]').forEach(e=>e.onclick=()=>{tab='booking';editing=null;earlyFinishAuthorized=false;checkedServices=[];extras=[];panel=null;render()});root.querySelectorAll('[data-edit]').forEach(e=>e.onclick=()=>{earlyFinishAuthorized=false;editing=e.dataset.edit;let b=store.bookings.find(x=>x.id===editing);checkedServices=(b.items||[]).map(i=>i.id);extras=clone(b.extras||[]);tab='booking';panel=null;render()});root.querySelectorAll('[data-panel]').forEach(e=>e.onclick=()=>{panel=panel===e.dataset.panel?null:e.dataset.panel;render()});root.querySelectorAll('[data-close-calendar-popup]').forEach(e=>e.onclick=ev=>{if(e!==ev.target)return;panel=null;render()});root.querySelectorAll('[data-back]').forEach(e=>e.onclick=()=>{panel=null;render()});root.querySelectorAll('[data-today]').forEach(e=>e.onclick=()=>{selected=localDate(new Date());cursor=new Date();panel=null;render()});if(tab==='booking'&&panel===null){setupClientAutocomplete()} let calSearch=root.querySelector('#calSearch');if(calSearch){calSearch.oninput=()=>{search=calSearch.value;root.querySelector('#searchResults').innerHTML=searchResults();bindSearchResults()}}bindSearchResults();if(tab==='booking'&&panel===null){refreshMemberCard()}root.querySelectorAll('[data-treatment-gender]').forEach(el=>el.onclick=()=>{captureForm();const g=el.dataset.treatmentGender;treatmentGender=treatmentGender===g?null:g;treatmentCategory=null;render();restoreForm()});
 root.querySelectorAll('[data-treatment-category]').forEach(el=>el.onclick=()=>{captureForm();treatmentCategory=el.dataset.treatmentCategory;render();restoreForm();openTreatmentWheel()});root.querySelectorAll('[data-treatment-remove]').forEach(e=>e.onclick=()=>{captureForm();checkedServices=checkedServices.filter(id=>id!==e.dataset.treatmentRemove);recalcTreatmentEnd();render();restoreForm()});root.querySelectorAll('[data-add-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.push({name:'',amount:0,kind:e.dataset.addExtra==='minus'?'minus':'plus'});render();restoreForm();previewExtraBill()});root.querySelectorAll('[data-remove-extra]').forEach(e=>e.onclick=()=>{captureForm();extras.splice(+e.dataset.removeExtra,1);render();restoreForm();previewExtraBill()});root.querySelectorAll('[data-extra-name],[data-extra-amount]').forEach(e=>e.addEventListener('input',previewExtraBill));const payCard=root.querySelector('#payCard'),payCash=root.querySelector('#payCash');
 if(payCard&&payCash){
  const preview=()=>previewExtraBill();
@@ -1624,7 +1757,7 @@ function submitBooking(){
  commitCompletedBooking(ctx,null,currentMethod);
 }
 
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=102',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=103',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{}));
 if(typeof setInterval==='function')setInterval(checkEndReminders,30000);
 if(typeof document.addEventListener==='function')document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkEndReminders()});
 render();
