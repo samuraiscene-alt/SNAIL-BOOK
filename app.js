@@ -879,6 +879,7 @@ async function googleSyncBookings(){
 const CLOUD_URL='https://jiqcdbandxletnqpdkaj.supabase.co';
 const CLOUD_KEY="sb_publishable_IYFrIGO5hYnucIHprJQEGQ_bae42Jl7";
 const CLOUD_ENABLED_KEY='snailbook_family_cloud_enabled_v1';
+const CLOUD_PENDING_KEY='snailbook_family_unsent_changes_v1';
 let cloudClient=null,cloudUser=null,cloudEnabled=localStorage.getItem(CLOUD_ENABLED_KEY)==='yes';
 let cloudRevision=0,cloudBusy=false,cloudConflict=false,cloudDirty=false,cloudTimer=null,cloudPolling=null,cloudMessage='연결 확인 중';
 function cloudStatus(){return !cloudUser?'로그인 전':cloudConflict?'수정 충돌 · 백업 후 서버 자료 확인':!cloudEnabled?'로그인됨 · 공유 시작 전':cloudBusy?'서버 저장 중':cloudDirty?'저장 대기 중':cloudMessage}
@@ -896,7 +897,7 @@ function cloudAdopt(state,revision){
  store={...clone(base),...clone(state),settings:{...base.settings,...state.settings}};
  if(localGoogle)store.googleSyncEvents=localGoogle;
  localStorage.setItem(KEY,JSON.stringify(store));
- cloudRevision=Number(revision)||1;cloudDirty=false;cloudConflict=false;cloudMessage='동기화 완료';render();
+ cloudRevision=Number(revision)||1;cloudDirty=false;cloudConflict=false;localStorage.removeItem(CLOUD_PENDING_KEY);cloudMessage='동기화 완료';render();
 }
 async function cloudFetchRow(){
  if(!cloudClientReady()||!cloudUser)throw Error('로그인이 필요합니다.');
@@ -905,7 +906,7 @@ async function cloudFetchRow(){
 }
 function cloudScheduleSave(){
  if(!cloudEnabled||!cloudUser||cloudConflict)return;
- cloudDirty=true;cloudMessage='저장 대기 중';
+ cloudDirty=true;localStorage.setItem(CLOUD_PENDING_KEY,'yes');cloudMessage='저장 대기 중';
  clearTimeout(cloudTimer);cloudTimer=setTimeout(cloudFlush,450);
 }
 async function cloudFlush(){
@@ -919,6 +920,7 @@ async function cloudFlush(){
   if(!Number(data)){cloudConflict=true;cloudMessage='다른 폰에서 먼저 수정함';alert('두 아이폰의 수정이 충돌했습니다.\n이 폰의 변경 사항은 로컬에 남아 있습니다.\n백업 후 설정 → 두 아이폰 공유에서 확인해 주세요.');return;}
   cloudRevision=Number(data);cloudDirty=JSON.stringify(cloudSafeSnapshot(store))!==JSON.stringify(snapshot);
   cloudMessage=cloudDirty?'추가 변경 저장 대기':'서버 저장 완료';
+  if(!cloudDirty)localStorage.removeItem(CLOUD_PENDING_KEY);
  }catch(e){cloudDirty=true;cloudMessage='인터넷 연결 또는 서버 저장 오류';}
  finally{
   cloudBusy=false;
@@ -941,6 +943,10 @@ async function cloudBootstrap(){
   if(error&&!/session/i.test(error.message||''))throw error;
   cloudUser=data?.user||null;
   if(cloudUser&&cloudEnabled){
+   if(localStorage.getItem(CLOUD_PENDING_KEY)==='yes'){
+    cloudConflict=true;cloudDirty=true;cloudMessage='전송되지 않은 로컬 변경 보호 중';
+    if(tab==='settings')render();return;
+   }
    const remote=await cloudFetchRow();
    if(remote)cloudAdopt(remote.state,remote.revision);
    else{cloudEnabled=false;localStorage.removeItem(CLOUD_ENABLED_KEY);cloudMessage='서버 자료가 없습니다. 공유 시작을 선택하세요';}
@@ -984,7 +990,7 @@ async function cloudLogout(){
  if(cloudDirty||cloudBusy||cloudConflict){alert('미전송 변경 사항이 있습니다. 먼저 백업과 동기화 상태를 확인하세요.');return}
  if(!confirm('이 기기에서 로그아웃할까요?'))return;
  await cloudClient?.auth.signOut();
- cloudUser=null;cloudEnabled=false;cloudRevision=0;cloudMessage='로그아웃';
+ cloudUser=null;cloudEnabled=false;cloudRevision=0;cloudMessage='로그아웃';localStorage.removeItem(CLOUD_PENDING_KEY);
  localStorage.removeItem(CLOUD_ENABLED_KEY);render();
 }
 async function cloudStart(){
@@ -997,7 +1003,7 @@ async function cloudStart(){
   if(remote){alert('이미 공유 서버 자료가 있습니다. 기존 공유 자료 가져오기를 사용하세요.');return}
   const {data,error}=await cloudClient.from('snail_shop_state').insert({owner_id:cloudUser.id,state:cloudSafeSnapshot(store),revision:1}).select('revision').single();
   if(error)throw error;
-  cloudRevision=Number(data.revision);cloudEnabled=true;cloudDirty=false;cloudMessage='공유 시작 완료';
+  cloudRevision=Number(data.revision);cloudEnabled=true;cloudDirty=false;localStorage.removeItem(CLOUD_PENDING_KEY);cloudMessage='공유 시작 완료';
   localStorage.setItem(CLOUD_ENABLED_KEY,'yes');render();notify('가족 공유 시작 완료');
  }catch(e){alert('공유 시작 실패: '+e.message+'\n이 폰의 로컬 데이터는 그대로입니다.')}
 }
