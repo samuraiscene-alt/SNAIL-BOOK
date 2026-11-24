@@ -1442,3 +1442,13 @@ body > nav.nav > button.active > .nav-icon{
 .google-setup .google-status{font-size:14px;font-weight:700;color:#78475d;margin:17px 0 4px}
 .google-setup .primary{background:#f35580;color:white}
 .google-setup .note{font-size:14px;line-height:1.65;color:#806779}
+
+/* v1.0.4: family two-device cloud setup */
+#app.light .cloud-panel .card{background:#fffdfd;border:1px solid #f1d5df}
+#app.light .cloud-panel .card>strong,#app.light .cloud-panel .card>b{color:#764057;font-size:18px}
+#app.light .cloud-panel label{display:block;margin:14px 0 6px;font-size:15px;font-weight:750;color:#794c62}
+#app.light .cloud-panel input{box-sizing:border-box;display:block;width:100%;min-height:46px;background:#fff5f9;border:1px solid #ebcfdb;border-radius:9px;color:#503442;font-size:16px;padding:9px 11px}
+#app.light .cloud-panel .primary,#app.light .cloud-panel .ghost{width:100%;margin-top:12px;min-height:47px;border-radius:12px;font-size:16px}
+#app.light .cloud-panel .primary{background:#f35580;color:#fff}
+#app.light .cloud-panel .note{line-height:1.6;color:#805f70}
+#app.light .setting-row .icon-cloud{display:inline-flex}
