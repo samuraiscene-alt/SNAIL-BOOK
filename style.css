@@ -1455,3 +1455,8 @@ body > nav.nav > button.active > .nav-icon{
 
 /* cloud sharing icon only: no existing icon assets modified */
 #app.light .setting-row .icon-cloud::before{content:"☁";display:flex;align-items:center;justify-content:center;color:#de6e9a;font-size:30px;line-height:1}
+
+/* v1.0.6 — isolated development data + dedicated backend */
+#app .snail-dev-indicator{position:fixed;top:calc(env(safe-area-inset-top,0px) + 3px);left:50%;transform:translateX(-50%);z-index:99;pointer-events:none;padding:5px 13px;border-radius:30px;background:#a7345e;color:white;font-size:11px;font-weight:800;letter-spacing:0;white-space:nowrap;box-shadow:0 2px 6px #0002}
+#app.light .cloud-test-tools{background:#fff2f7;border:1px solid #efb5cc}
+#app.light .cloud-test-tools .ghost{color:#a93264;background:white;border:1px solid #edb5c9}
