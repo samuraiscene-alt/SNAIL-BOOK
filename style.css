@@ -1511,3 +1511,13 @@ body > nav.nav > button.active > .nav-icon{
 .client-detail-dialog .client-detail-actions{margin-top:16px}
 .client-detail-dialog .client-detail-actions button{font-size:14px}
 #app.light .booking-wallet-charge{display:block;margin:14px auto 0;padding:10px 17px;background:#fff0f6;border:1px solid #efbdd0;border-radius:12px;color:#ab426e;font-size:15px;font-weight:750}
+
+/* v1.0.16 — payment controls stay closed until user deliberately opens settlement; existing embossed card textures remain. */
+#app.light .booking-payment-accordion{margin:13px 8px 4px;border:1px solid #efc9d9;border-radius:15px;overflow:hidden;background:rgba(255,244,249,.42)}
+#app.light .booking-payment-accordion>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 14px;color:#794358}
+#app.light .booking-payment-accordion>summary::-webkit-details-marker{display:none}
+#app.light .booking-payment-accordion>summary strong{font-size:17px;font-weight:800}
+#app.light .booking-payment-accordion>summary span{font-size:13px;color:#9c7183}
+#app.light .booking-payment-accordion[open]>summary{border-bottom:1px solid #efd4df}
+#app.light .booking-payment-inner{padding:10px 3px 12px}
+#app.light .booking-payment-inner .card{margin-bottom:10px}
