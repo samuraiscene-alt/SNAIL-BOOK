@@ -1485,3 +1485,7 @@ body > nav.nav > button.active > .nav-icon{
 #app.light .sales-inline-content .receipt-customer .receipt-swipe-main{padding-top:10px;padding-bottom:10px}
 #app.light .sales-inline-content .receipt-customer .receipt-row-date{margin-top:0;margin-bottom:4px}
 #app.light .sales-inline-content .receipt-customer .receipt-swipe{margin-top:6px;margin-bottom:6px}
+
+/* v1.0.13: unobtrusive delete action in booking edit; existing embossed styling retained */
+#app.light .booking-delete-minor{display:block;width:max-content;max-width:100%;margin:15px auto 6px;padding:9px 17px;border:0;border-radius:11px;background:transparent;color:#cb4565;font-size:15px;font-weight:750;text-align:center}
+#app.light .booking-delete-minor:active{background:rgba(230,79,115,.09)}
