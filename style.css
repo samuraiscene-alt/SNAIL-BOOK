@@ -1521,3 +1521,12 @@ body > nav.nav > button.active > .nav-icon{
 #app.light .booking-payment-accordion[open]>summary{border-bottom:1px solid #efd4df}
 #app.light .booking-payment-inner{padding:10px 3px 12px}
 #app.light .booking-payment-inner .card{margin-bottom:10px}
+
+/* v1.0.17: independent treatment and settlement accordions with original embossed paper style. */
+#app.light .booking-settlement-accordion{margin:18px 0 14px;border:1px solid #eebed1;border-radius:19px;background:rgba(255,238,246,.38)}
+#app.light .booking-settlement-accordion>summary{padding:18px;color:#713b54}
+#app.light .booking-settlement-accordion>summary strong{font-size:20px;font-weight:800}
+#app.light .booking-settlement-accordion>summary span{font-size:13px;color:#a56982}
+#app.light .booking-settlement-accordion .booking-payment-inner{padding:12px 5px 15px}
+#app.light .booking-memo-card{margin:15px 0}
+#app.light .booking-reserve-button{display:block;width:100%;margin:13px 0 18px}
