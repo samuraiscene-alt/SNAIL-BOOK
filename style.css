@@ -1489,3 +1489,25 @@ body > nav.nav > button.active > .nav-icon{
 /* v1.0.13: unobtrusive delete action in booking edit; existing embossed styling retained */
 #app.light .booking-delete-minor{display:block;width:max-content;max-width:100%;margin:15px auto 6px;padding:9px 17px;border:0;border-radius:11px;background:transparent;color:#cb4565;font-size:15px;font-weight:750;text-align:center}
 #app.light .booking-delete-minor:active{background:rgba(230,79,115,.09)}
+
+/* v1.0.14 — scrollable customer history inside original dark modal */
+.client-detail-dialog{max-height:min(82dvh,760px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.client-visits-accordion{border-top:1px solid #363740;margin-top:4px;padding:12px 0 2px}
+.client-visits-accordion>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;background:#2d2e35;border-radius:12px;padding:13px 12px;color:#f7f7f8;font-size:15px;font-weight:750}
+.client-visits-accordion>summary::-webkit-details-marker{display:none}
+.client-visit-arrow{font-size:16px;color:#c3c2cd}
+.client-visits-accordion[open] .client-visit-arrow{transform:rotate(180deg)}
+.client-visits-list{padding:5px 3px 0;display:grid;gap:0}
+.client-visit-item{padding:12px 8px;border-bottom:1px solid #373942}
+.client-visit-item:last-child{border-bottom:0}
+.client-visit-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#b4b5c0;font-size:13px}
+.client-visit-status{flex-shrink:0;font-weight:800}
+.client-visit-paid,.client-visit-done{color:#8bd6a7}
+.client-visit-cancelled{color:#f394a6}
+.client-visit-noshow{color:#f0bd75}
+.client-visit-reserved{color:#9dbffe}
+.client-visit-name{margin-top:7px;color:#f5f5f7;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.client-visit-empty{padding:18px 8px;color:#aaaeba;font-size:14px}
+.client-detail-dialog .client-detail-actions{margin-top:16px}
+.client-detail-dialog .client-detail-actions button{font-size:14px}
+#app.light .booking-wallet-charge{display:block;margin:14px auto 0;padding:10px 17px;background:#fff0f6;border:1px solid #efbdd0;border-radius:12px;color:#ab426e;font-size:15px;font-weight:750}
